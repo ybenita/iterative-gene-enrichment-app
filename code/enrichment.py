@@ -8,9 +8,9 @@ import pandas as pd
 from scipy.stats import chi2_contingency, fisher_exact, hypergeom
 from statsmodels.stats.multitest import multipletests
 
-from background_gene_set import BackgroundGeneSet
-from gene_set import GeneSet
-from gene_set_library import GeneSetLibrary
+from code.background_gene_set import BackgroundGeneSet
+from code.gene_set import GeneSet
+from code.gene_set_library import GeneSetLibrary
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

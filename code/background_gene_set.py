@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Set, Optional
 
-from gene_converter import GeneConverter
+from code.gene_converter import GeneConverter
 
 
 class BackgroundGeneSet:

@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
 
-from gene_converter import GeneConverter
+from code.gene_converter import GeneConverter
 
 logger = logging.getLogger(__name__)
 

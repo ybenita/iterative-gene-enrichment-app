@@ -5,10 +5,10 @@ from typing import Any, Dict, List, Optional, Set, Callable
 
 import pandas as pd
 
-from background_gene_set import BackgroundGeneSet
-from enrichment import Enrichment, format_term_name
-from gene_set import GeneSet
-from gene_set_library import GeneSetLibrary
+from code.background_gene_set import BackgroundGeneSet
+from code.enrichment import Enrichment, format_term_name
+from code.gene_set import GeneSet
+from code.gene_set_library import GeneSetLibrary
 
 logger = logging.getLogger(__name__)
 
@@ -576,7 +576,7 @@ class IterativeEnrichment:
             Format term name by replacing underscores with spaces and adding colon after library shortcut.
             """
             # Import the format_term_name function from enrichment module
-            from enrichment import format_term_name
+            from code.enrichment import format_term_name
             return format_term_name(term_name)
 
         nodes: Set[str] = set()
