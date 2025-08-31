@@ -24,14 +24,16 @@ class GeneConverter:
         """
         if gene_info_path is None:
             # Look for the file in the project root
-            project_root = Path(__file__).resolve().parent.parent
-            gene_info_path = project_root / "Homo_sapiens.gene_info"
+            import os
+            project_root = Path(os.getcwd())
+            gene_info_path = project_root / "data" / "recent_release" / "Homo_sapiens.gene_info"
         
         self.gene_info_path = Path(gene_info_path)
         
         if gene_history_path is None:
             # Look for the file in the recent_release directory
-            project_root = Path(__file__).resolve().parent.parent
+            import os
+            project_root = Path(os.getcwd())
             gene_history_path = project_root / "data" / "recent_release" / "gene_history"
         
         self.gene_history_path = Path(gene_history_path)

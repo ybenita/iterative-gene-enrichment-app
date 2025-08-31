@@ -7,8 +7,8 @@ import plotly.express as px
 import streamlit as st
 from streamlit import session_state as state
 
-from enrichment import Enrichment
-from iter_enrichment import IterativeEnrichment
+from code.enrichment import Enrichment
+from code.iter_enrichment import IterativeEnrichment
 from ui.dot_utils import dot_to_plotly
 from ui.utils import download_link
 
