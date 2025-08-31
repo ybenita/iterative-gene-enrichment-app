@@ -1,0 +1,38 @@
+[
+    {
+        "name": "All genes",
+        "file": "all_genes.txt",
+        "format": "symbols",
+        "active": true
+    },
+    {
+        "name": "all_genes_from_c2_c5_msigdb",
+        "file": "all_genes_from_c2_c5_msigdb.txt",
+        "format": "symbols",
+        "active": false
+    },
+    {
+        "name": "hgnc_symbols_2023-01-01",
+        "file": "hgnc_symbols_2023-01-01.txt",
+        "format": "symbols",
+        "active": false
+    },
+    {
+        "name": "all_genes_from_c2_c5_msigdb_no_all",
+        "file": "all_genes_from_c2_c5_msigdb_no_all.txt",
+        "format": "symbols",
+        "active": false
+    },
+    {
+        "name": "all_genes_from_msigdb",
+        "file": "all_genes_from_msigdb.txt",
+        "format": "symbols",
+        "active": false
+    },
+    {
+        "name": "Afffymetrix U133 plus2",
+        "file": "Afffymetrix U133 plus2.txt",
+        "format": "entrez_ids",
+        "active": true
+    }
+]
