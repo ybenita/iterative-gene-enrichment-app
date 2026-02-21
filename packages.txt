@@ -1,4 +1,2 @@
-# System packages required for Streamlit Cloud deployment
 graphviz
 graphviz-dev
-
