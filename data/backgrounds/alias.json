@@ -1,0 +1,14 @@
+[
+    {
+        "name": "All genes",
+        "file": "all_genes.txt",
+        "format": "symbols",
+        "active": true
+    },
+    {
+        "name": "Afffymetrix U133 plus2",
+        "file": "Afffymetrix U133 plus2.txt",
+        "format": "entrez_ids",
+        "active": true
+    }
+]
