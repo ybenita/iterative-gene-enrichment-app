@@ -1618,6 +1618,10 @@ Results include ranked tables, bar charts, and network graphs."""
                 # Only select libraries that have results
                 libraries_with_results = [lib for lib in available_libraries if not state.iter_enrich[lib].to_dataframe().empty]
                 state.selected_dot_paths = libraries_with_results.copy()
+                # Update each checkbox widget state so Streamlit reflects the change
+                for lib in available_libraries:
+                    safe_lib_name = lib.replace(':', '_').replace(' ', '_').replace('-', '_')
+                    state[f"network_select_{safe_lib_name}"] = lib in libraries_with_results
                 # Clear network when selection changes
                 state.network_generated = False
                 state.last_merged_dot = ""
@@ -1625,6 +1629,10 @@ Results include ranked tables, bar charts, and network graphs."""
             
             if st.button("Clear All"):
                 state.selected_dot_paths = []
+                # Update each checkbox widget state so Streamlit reflects the change
+                for lib in available_libraries:
+                    safe_lib_name = lib.replace(':', '_').replace(' ', '_').replace('-', '_')
+                    state[f"network_select_{safe_lib_name}"] = False
                 # Clear network when selection changes
                 state.network_generated = False
                 state.last_merged_dot = ""
