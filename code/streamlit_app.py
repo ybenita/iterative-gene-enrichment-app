@@ -1446,29 +1446,22 @@ Results include ranked tables, bar charts, and network graphs."""
         # Extract ORA results
         ora_results = _extract_iteration_1_as_ora(state.iter_enrich)
         combined_ora = _build_ora_tables_download(ora_results) if ora_results else None
-        ora_archive_path = _create_combined_ora_archive(state.iter_enrich) if ora_results else None
         
         # Build iGEA results
         combined_igea = _build_iterative_tables_download(state.iter_results)
-        combined_archive_path = _create_combined_iteration_archive({})
         
         # Create table data
         ora_combined_link = download_link(combined_ora, 'ora_enrichment_results', 'tsv') if combined_ora else "—"
-        ora_individual_link = download_file_link(ora_archive_path, Path(ora_archive_path).name.replace('.tar.gz', ''), 'tar.gz') if ora_archive_path else "—"
         igea_combined_link = download_link(combined_igea, 'iterative_enrichment_results', 'tsv')
-        igea_individual_link = download_file_link(combined_archive_path, Path(combined_archive_path).name.replace('.tar.gz', ''), 'tar.gz') if combined_archive_path else "—"
         
         # Display as table using markdown
         st.markdown("""
         | | ORA | iGEA |
         |---|---|---|
         | **Combined** | {ora_combined} | {igea_combined} |
-        | **Individual library files** | {ora_individual} | {igea_individual} |
         """.format(
             ora_combined=ora_combined_link,
-            ora_individual=ora_individual_link,
             igea_combined=igea_combined_link,
-            igea_individual=igea_individual_link
         ), unsafe_allow_html=True)
         
         # Download validated gene symbols
