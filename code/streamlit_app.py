@@ -1578,58 +1578,26 @@ Results include ranked tables, bar charts, and network graphs."""
         
         available_libraries = sort_libraries(list(state.iter_enrich.keys()))
         
-        # Create columns for better layout
-        col1, col2 = st.columns([3, 1])
-        
-        with col1:
-            # Interactive list with checkboxes for each library
-            st.write("**Available Libraries:**")
-            for lib in available_libraries:
-                # Check if this library has any enrichment results
-                has_results = not state.iter_enrich[lib].to_dataframe().empty
-                
-                # Sanitize library name for widget key (replace special characters)
-                safe_lib_name = lib.replace(':', '_').replace(' ', '_').replace('-', '_')
-                
-                if has_results:
-                    st.checkbox(
-                        lib,
-                        value=lib in state.selected_dot_paths,
-                        key=f"network_select_{safe_lib_name}",
-                        on_change=toggle_network_selection,
-                        args=(lib,)
-                    )
-                else:
-                    # Gray out libraries with no results
-                    st.markdown(f"~~{lib}~~ *(no enrichment results)*")
-        
-        with col2:
-            # Quick selection controls
-            st.write("**Quick Actions:**")
+        # Interactive list with checkboxes for each library
+        st.write("**Available Libraries:**")
+        for lib in available_libraries:
+            # Check if this library has any enrichment results
+            has_results = not state.iter_enrich[lib].to_dataframe().empty
             
-            if st.button("Select All"):
-                # Only select libraries that have results
-                libraries_with_results = [lib for lib in available_libraries if not state.iter_enrich[lib].to_dataframe().empty]
-                state.selected_dot_paths = libraries_with_results.copy()
-                # Delete widget keys so checkboxes re-initialize with correct value on rerun
-                for lib in available_libraries:
-                    safe_lib_name = lib.replace(':', '_').replace(' ', '_').replace('-', '_')
-                    state.pop(f"network_select_{safe_lib_name}", None)
-                # Clear network when selection changes
-                state.network_generated = False
-                state.last_merged_dot = ""
-                st.rerun()
+            # Sanitize library name for widget key (replace special characters)
+            safe_lib_name = lib.replace(':', '_').replace(' ', '_').replace('-', '_')
             
-            if st.button("Clear All"):
-                state.selected_dot_paths = []
-                # Delete widget keys so checkboxes re-initialize with correct value on rerun
-                for lib in available_libraries:
-                    safe_lib_name = lib.replace(':', '_').replace(' ', '_').replace('-', '_')
-                    state.pop(f"network_select_{safe_lib_name}", None)
-                # Clear network when selection changes
-                state.network_generated = False
-                state.last_merged_dot = ""
-                st.rerun()
+            if has_results:
+                st.checkbox(
+                    lib,
+                    value=lib in state.selected_dot_paths,
+                    key=f"network_select_{safe_lib_name}",
+                    on_change=toggle_network_selection,
+                    args=(lib,)
+                )
+            else:
+                # Gray out libraries with no results
+                st.markdown(f"~~{lib}~~ *(no enrichment results)*")
 
         # generate or re-display merged network
         if st.button("Generate Network"):
