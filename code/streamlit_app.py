@@ -1773,7 +1773,6 @@ Results include ranked tables, bar charts, and network graphs."""
                         
                         # Download link for full report
                         if state.benchmark_report_text:
-                            st.markdown("---")
                             st.markdown("**📄 Download Full Statistical Report:**")
                             st.download_button(
                                 label="Download Statistical Report (Text)",
