@@ -660,11 +660,13 @@ def render_ora_igea_comparison(
     
     # Display as expanded table with ORA split into raw p-value and FDR
     st.markdown("""
-    | | ORA (raw p-value) | ORA (FDR) | iGEA | Overlap (raw) | Overlap (FDR) |
+    | | ORA (p≤{p_thr}) | ORA (FDR<{fdr_thr}) | iGEA (p≤{p_thr}) | Overlap (raw) | Overlap (FDR) |
     |---|---|---|---|---|---|
     | **Genes** | {ora_raw_genes} | {ora_fdr_genes} | {igea_genes} | {overlap_raw_genes} | {overlap_fdr_genes} |
     | **Terms** | {ora_raw_terms} | {ora_fdr_terms} | {igea_terms} | {overlap_raw_terms} | {overlap_fdr_terms} |
     """.format(
+        p_thr=p_threshold,
+        fdr_thr=fdr_threshold,
         ora_raw_genes=gene_stats["ora_raw_total"],
         ora_fdr_genes=gene_stats["ora_fdr_total"],
         igea_genes=gene_stats["igea_total"],
