@@ -1438,6 +1438,16 @@ Results include ranked tables, bar charts, and network graphs."""
             
             state.iter_ready = True
 
+            # Auto-select all libraries that have enrichment results for the network
+            state.selected_dot_paths = [
+                lib for lib, it in state.iter_enrich.items()
+                if not it.to_dataframe().empty
+            ]
+            # Pre-seed the network checkbox widget keys so they render as checked
+            for lib in state.selected_dot_paths:
+                safe_lib_name = lib.replace(':', '_').replace(' ', '_').replace('-', '_')
+                state[f"network_select_{safe_lib_name}"] = True
+
     # Iterative rendering
     if mode == "Iterative" and state.iter_ready:
         # Download section as a table
@@ -1559,69 +1569,6 @@ Results include ranked tables, bar charts, and network graphs."""
         else:
             logger.info("Comparison not displayed - no iterative results")
 
-        # Network section
-        st.markdown("---")
-        st.header("Generate network for conversational AI systems")
-        
-        # Interactive library selection interface
-        st.subheader("Library Selection for Network")
-        
-        # Get all available libraries in specific order: Hallmark, C2 (alphabetical), C5 (alphabetical), Protein Interaction
-        def sort_libraries(libraries):
-            hallmark = [lib for lib in libraries if lib.startswith("H:")]
-            c2_libs = sorted([lib for lib in libraries if lib.startswith("C2:")])
-            c5_libs = sorted([lib for lib in libraries if lib.startswith("C5:")])
-            protein_interaction = [lib for lib in libraries if lib.startswith("Protein Interaction")]
-            other = sorted([lib for lib in libraries if not any(lib.startswith(prefix) for prefix in ["H:", "C2:", "C5:", "Protein Interaction"])])
-            
-            return hallmark + c2_libs + c5_libs + protein_interaction + other
-        
-        available_libraries = sort_libraries(list(state.iter_enrich.keys()))
-        
-        # Interactive list with checkboxes for each library
-        st.write("**Available Libraries:**")
-        for lib in available_libraries:
-            # Check if this library has any enrichment results
-            has_results = not state.iter_enrich[lib].to_dataframe().empty
-            
-            # Sanitize library name for widget key (replace special characters)
-            safe_lib_name = lib.replace(':', '_').replace(' ', '_').replace('-', '_')
-            
-            if has_results:
-                st.checkbox(
-                    lib,
-                    value=lib in state.selected_dot_paths,
-                    key=f"network_select_{safe_lib_name}",
-                    on_change=toggle_network_selection,
-                    args=(lib,)
-                )
-            else:
-                # Gray out libraries with no results
-                st.markdown(f"~~{lib}~~ *(no enrichment results)*")
-
-        # generate or re-display merged network
-        if st.button("Generate Network"):
-            if not state.selected_dot_paths:
-                st.error("Please select at least one library for network generation.")
-            else:
-                state.network_generated = True
-                available = set(state.iter_dot.keys())
-                chosen = [lib for lib in state.selected_dot_paths if lib in available]
-                if not chosen:
-                    st.error("No valid libraries selected for network generation.")
-                else:
-                    selected_dots = {lib: state.iter_dot[lib] for lib in chosen}
-                    state.last_merged_dot = merge_iterative_dot(selected_dots)
-                    # Get gene count and library list for AI prompt
-                    gene_count = state.gene_set.size if hasattr(state, 'gene_set') and state.gene_set else None
-                    library_list = chosen if chosen else None
-                    render_network(state.last_merged_dot, gene_count=gene_count, library_list=library_list)
-        elif state.network_generated and state.selected_dot_paths:
-            # Get gene count and library list for AI prompt
-            gene_count = state.gene_set.size if hasattr(state, 'gene_set') and state.gene_set else None
-            library_list = state.selected_dot_paths if state.selected_dot_paths else None
-            render_network(state.last_merged_dot, gene_count=gene_count, library_list=library_list)
-        
         # Statistical Benchmarking Section
         st.markdown("---")
         st.header("📊 Statistical Benchmarking")
@@ -1840,6 +1787,69 @@ Results include ranked tables, bar charts, and network graphs."""
                 st.warning("Benchmark computation completed but no cluster data available.")
         else:
             st.info("Run iterative enrichment analysis first to enable statistical benchmarking.")
+
+        # Network section
+        st.markdown("---")
+        st.header("Generate network for conversational AI systems")
+        
+        # Interactive library selection interface
+        st.subheader("Library Selection for Network")
+        
+        # Get all available libraries in specific order: Hallmark, C2 (alphabetical), C5 (alphabetical), Protein Interaction
+        def sort_libraries(libraries):
+            hallmark = [lib for lib in libraries if lib.startswith("H:")]
+            c2_libs = sorted([lib for lib in libraries if lib.startswith("C2:")])
+            c5_libs = sorted([lib for lib in libraries if lib.startswith("C5:")])
+            protein_interaction = [lib for lib in libraries if lib.startswith("Protein Interaction")]
+            other = sorted([lib for lib in libraries if not any(lib.startswith(prefix) for prefix in ["H:", "C2:", "C5:", "Protein Interaction"])])
+            
+            return hallmark + c2_libs + c5_libs + protein_interaction + other
+        
+        available_libraries = sort_libraries(list(state.iter_enrich.keys()))
+        
+        # Interactive list with checkboxes for each library
+        st.write("**Available Libraries:**")
+        for lib in available_libraries:
+            # Check if this library has any enrichment results
+            has_results = not state.iter_enrich[lib].to_dataframe().empty
+            
+            # Sanitize library name for widget key (replace special characters)
+            safe_lib_name = lib.replace(':', '_').replace(' ', '_').replace('-', '_')
+            
+            if has_results:
+                st.checkbox(
+                    lib,
+                    value=lib in state.selected_dot_paths,
+                    key=f"network_select_{safe_lib_name}",
+                    on_change=toggle_network_selection,
+                    args=(lib,)
+                )
+            else:
+                # Gray out libraries with no results
+                st.markdown(f"~~{lib}~~ *(no enrichment results)*")
+
+        # generate or re-display merged network
+        if st.button("Generate Network"):
+            if not state.selected_dot_paths:
+                st.error("Please select at least one library for network generation.")
+            else:
+                state.network_generated = True
+                available = set(state.iter_dot.keys())
+                chosen = [lib for lib in state.selected_dot_paths if lib in available]
+                if not chosen:
+                    st.error("No valid libraries selected for network generation.")
+                else:
+                    selected_dots = {lib: state.iter_dot[lib] for lib in chosen}
+                    state.last_merged_dot = merge_iterative_dot(selected_dots)
+                    # Get gene count and library list for AI prompt
+                    gene_count = state.gene_set.size if hasattr(state, 'gene_set') and state.gene_set else None
+                    library_list = chosen if chosen else None
+                    render_network(state.last_merged_dot, gene_count=gene_count, library_list=library_list)
+        elif state.network_generated and state.selected_dot_paths:
+            # Get gene count and library list for AI prompt
+            gene_count = state.gene_set.size if hasattr(state, 'gene_set') and state.gene_set else None
+            library_list = state.selected_dot_paths if state.selected_dot_paths else None
+            render_network(state.last_merged_dot, gene_count=gene_count, library_list=library_list)
 
     logger.info("Finishing the Streamlit app")
 
