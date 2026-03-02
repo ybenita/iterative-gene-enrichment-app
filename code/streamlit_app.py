@@ -825,10 +825,10 @@ Results include ranked tables, bar charts, and network graphs."""
             
             # Initialize default libraries if not already set
             if not hasattr(state, 'libraries') or not state.libraries:
+                # Default to all libraries except Protein Interaction
                 default_libraries = [
-                    "H: Hallmark Gene Sets",
-                    "C2: Reactome Pathways", 
-                    "C5: Gene Ontology: Biological Process"
+                    lib for lib in list(state.lib_mapper.keys())
+                    if not lib.startswith("Protein Interaction")
                 ]
                 state.libraries = default_libraries
             
