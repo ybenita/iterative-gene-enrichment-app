@@ -1773,12 +1773,10 @@ Results include ranked tables, bar charts, and network graphs."""
                         
                         # Download link for full report
                         if state.benchmark_report_text:
-                            st.markdown("**📄 Download Full Statistical Report:**")
-                            st.download_button(
-                                label="Download Statistical Report (Text)",
-                                data=state.benchmark_report_text,
-                                file_name=f"{state.gene_set_name if hasattr(state, 'gene_set_name') and state.gene_set_name else 'statistical_report'}.txt",
-                                mime="text/plain"
+                            report_name = state.gene_set_name if hasattr(state, 'gene_set_name') and state.gene_set_name else 'statistical_report'
+                            st.markdown(
+                                f"📄 **Download Full Statistical Report:** {download_link(state.benchmark_report_text, report_name, 'txt')}",
+                                unsafe_allow_html=True,
                             )
                 else:
                     st.warning("No clusters found in the network. Benchmarking requires at least one cluster.")
