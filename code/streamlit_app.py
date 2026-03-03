@@ -756,7 +756,7 @@ Results include ranked tables, bar charts, and network graphs."""
                 for f in (ROOT / "data" / "gene_lists").rglob("*.txt")
             ]
             st.selectbox(
-                "Or select a file from the `data` folder",
+                "Or select an example file:",
                 ["Select ..."] + gene_files,
                 index=0,
                 on_change=update_text_widgets,
