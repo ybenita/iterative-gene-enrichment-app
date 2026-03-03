@@ -644,19 +644,13 @@ def main() -> None:
 Results include ranked tables, bar charts, and network graphs."""
     )
     
-    # Documentation button — opens rendered HTML on GitHub via htmlpreview.github.io
-    import os
-    github_owner = os.getenv("GITHUB_OWNER", "aion-labs")
-    github_repo = os.getenv("GITHUB_REPO", "Gene-Enrichment-Analysis")
-    github_branch = os.getenv("GITHUB_BRANCH", "streamlit-cloud")
-    
-    raw_url = f"https://raw.githubusercontent.com/{github_owner}/{github_repo}/{github_branch}/documentation/STREAMLIT_USER_GUIDE.html"
-    file_url = f"https://htmlpreview.github.io/?{raw_url}"
+    # Documentation button — opens the iGEA website
+    doc_url = "https://bivas-benita.org/igea/index.html"
     
     st.sidebar.markdown(
         f'''
         <div style="margin: 0.5rem 0;">
-            <a href="{file_url}" target="_blank" style="text-decoration: none; display: block;">
+            <a href="{doc_url}" target="_blank" style="text-decoration: none; display: block;">
                 <button style="
                     background-color: #FF4B4B;
                     color: white;

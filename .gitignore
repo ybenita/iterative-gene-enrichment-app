@@ -25,3 +25,6 @@ Thumbs.db
 
 # Misc
 *.log
+
+# iGEA Website — deployed separately, not tracked in this repo
+documentation/iGEA website/
