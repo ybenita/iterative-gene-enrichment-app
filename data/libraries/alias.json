@@ -1,74 +1,74 @@
 [
-    {
-        "name": "H: Hallmark Gene Sets",
-        "file": "h.all.v2025.1.Hs.symbols.gmt",
-        "active": true,
-        "color": "#FF6B6B"
-    },
-    {
-        "name": "C2: BioCarta",
-        "file": "c2.cp.biocarta.v2025.1.Hs.symbols.gmt",
-        "active": true,
-        "color": "#DDA0DD"
-    },
-    {
-        "name": "C2: KEGG MEDICUS",
-        "file": "c2.cp.kegg_medicus.v2025.1.Hs.symbols.gmt",
-        "active": true,
-        "color": "#98D8C8"
-    },
-    {
-        "name": "C2: Pathway Interaction Database",
-        "file": "c2.cp.pid.v2025.1.Hs.symbols.gmt",
-        "active": true,
-        "color": "#F7DC6F"
-    },
-    {
-        "name": "C2: Reactome Pathways",
-        "file": "c2.cp.reactome.v2025.1.Hs.symbols.gmt",
-        "active": true,
-        "color": "#BB8FCE"
-    },
-    {
-        "name": "C2: WikiPathways",
-        "file": "c2.cp.wikipathways.v2025.1.Hs.symbols.gmt",
-        "active": true,
-        "color": "#85C1E9"
-    },
-    {
-        "name": "C2: KEGG Legacy",
-        "file": "c2.cp.kegg_legacy.v2025.1.Hs.symbols.gmt",
-        "active": true,
-        "color": "#F8C471"
-    },
-    {
-        "name": "C5: Gene Ontology: Biological Process",
-        "file": "c5.go.bp.v2025.1.Hs.symbols.gmt",
-        "active": true,
-        "color": "#F1948A"
-    },
-    {
-        "name": "C5: Gene Ontology: Cellular Component",
-        "file": "c5.go.cc.v2025.1.Hs.symbols.gmt",
-        "active": true,
-        "color": "#85C1E9"
-    },
-    {
-        "name": "C5: Gene Ontology: Molecular Function",
-        "file": "c5.go.mf.v2025.1.Hs.symbols.gmt",
-        "active": true,
-        "color": "#D7BDE2"
-    },
-    {
-        "name": "C5: Human Phenotype Ontology",
-        "file": "c5.hpo.v2025.1.Hs.symbols.gmt",
-        "active": true,
-        "color": "#F7DC6F"
-    },
-    {
-        "name": "Protein Interaction",
-        "file": "stringdb_protein_interactions.gmt",
-        "active": true,
-        "color": "#F5B7B1"
-    }
+  {
+    "name": "H: Hallmark Gene Sets",
+    "file": "h.all.v2025.1.Hs.symbols.gmt",
+    "active": true,
+    "color": "#FE456B"
+  },
+  {
+    "name": "C2: BioCarta",
+    "file": "c2.cp.biocarta.v2025.1.Hs.symbols.gmt",
+    "active": true,
+    "color": "#A35E9A"
+  },
+  {
+    "name": "C2: KEGG MEDICUS",
+    "file": "c2.cp.kegg_medicus.v2025.1.Hs.symbols.gmt",
+    "active": true,
+    "color": "#29996D"
+  },
+  {
+    "name": "C2: Pathway Interaction Database",
+    "file": "c2.cp.pid.v2025.1.Hs.symbols.gmt",
+    "active": true,
+    "color": "#116B1A"
+  },
+  {
+    "name": "C2: Reactome Pathways",
+    "file": "c2.cp.reactome.v2025.1.Hs.symbols.gmt",
+    "active": true,
+    "color": "#5A3F91"
+  },
+  {
+    "name": "C2: WikiPathways",
+    "file": "c2.cp.wikipathways.v2025.1.Hs.symbols.gmt",
+    "active": true,
+    "color": "#0005FD"
+  },
+  {
+    "name": "C2: KEGG Legacy",
+    "file": "c2.cp.kegg_legacy.v2025.1.Hs.symbols.gmt",
+    "active": true,
+    "color": "#B17500"
+  },
+  {
+    "name": "C5: Gene Ontology: Biological Process",
+    "file": "c5.go.bp.v2025.1.Hs.symbols.gmt",
+    "active": true,
+    "color": "#C50A00"
+  },
+  {
+    "name": "C5: Gene Ontology: Cellular Component",
+    "file": "c5.go.cc.v2025.1.Hs.symbols.gmt",
+    "active": true,
+    "color": "#009AD8"
+  },
+  {
+    "name": "C5: Gene Ontology: Molecular Function",
+    "file": "c5.go.mf.v2025.1.Hs.symbols.gmt",
+    "active": true,
+    "color": "#9A00C3"
+  },
+  {
+    "name": "C5: Human Phenotype Ontology",
+    "file": "c5.hpo.v2025.1.Hs.symbols.gmt",
+    "active": true,
+    "color": "#94045D"
+  },
+  {
+    "name": "Protein Interaction",
+    "file": "stringdb_protein_interactions.gmt",
+    "active": false,
+    "color": "#6D65FE"
+  }
 ]
