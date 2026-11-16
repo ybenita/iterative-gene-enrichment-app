@@ -312,8 +312,8 @@ class NetworkConnectivityAnalyzer:
             
             return component_genes, component_terms
         
-        # Find all components
-        for gene in self.genes:
+        # Find all components (iterate genes in sorted order so cluster order is deterministic)
+        for gene in sorted(self.genes):
             if gene not in visited_genes:
                 cluster_genes, cluster_terms = bfs(gene)
                 if cluster_genes or cluster_terms:
@@ -366,8 +366,12 @@ class NetworkConnectivityAnalyzer:
         """
         _, _, clusters = self._compute_connected_components()
         
-        # Sort by size (largest first)
-        clusters_sorted = sorted(clusters, key=lambda x: x['size'], reverse=True)
+        # Sort by size (largest first). Ties are broken by number of genes, then edges, then the
+        # alphabetically first gene, so the "largest cluster" is the same on every run.
+        clusters_sorted = sorted(
+            clusters,
+            key=lambda x: (-x['size'], -x['n_genes'], -x['n_edges'], min(x['genes']) if x['genes'] else ''),
+        )
         
         # Add cluster number
         for i, cluster in enumerate(clusters_sorted, start=1):

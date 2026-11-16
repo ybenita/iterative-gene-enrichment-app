@@ -10,7 +10,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-@st.cache_data(show_spinner="Loading gene set library...")
+@st.cache_resource(show_spinner="Loading gene set library...")
 def _cached_load_gmt(gmt_file_path: str) -> List[Dict[str, object]]:
     """Load and cache GMT file parsing. Returns raw library data."""
     library = []

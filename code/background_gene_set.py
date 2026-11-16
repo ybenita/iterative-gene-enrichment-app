@@ -6,7 +6,7 @@ import streamlit as st
 from gene_converter import GeneConverter
 
 
-@st.cache_data(show_spinner="Loading background gene set...")
+@st.cache_resource(show_spinner="Loading background gene set...")
 def _cached_load_background(background_file_path: str, input_format: str = "symbols", skip_validation: bool = False) -> Set[str]:
     """Load and cache background gene set from file. Returns set of gene symbols."""
     import logging
@@ -40,8 +40,8 @@ def _cached_load_background(background_file_path: str, input_format: str = "symb
         has_gene_data = stats.get('symbol_mappings', 0) > 0
         
         if not has_gene_data:
-            logger.warning("GeneConverter has no loaded data. Accepting all symbols without validation.")
-            return set(line.strip().upper() for line in raw_lines if line.strip())
+            raise RuntimeError("GeneConverter has no gene data; cannot validate the background. "
+                               "Check data/recent_release/Homo_sapiens.gene_info(.gz).")
         
         valid_symbols = []
         invalid_symbols = []

@@ -705,7 +705,8 @@ def render_network(
     dot: str, 
     title: str = "Iterative Enrichment Network",
     gene_count: int = None,
-    library_list: List[str] = None
+    library_list: List[str] = None,
+    llm_export: tuple = None
 ) -> None:
     """
     Render a bipartite network graph of iterative enrichment across libraries.
@@ -741,7 +742,12 @@ def render_network(
         )
     
     # Generate AI prompt - this is the source of truth for both clipboard and download
-    ai_prompt = generate_ai_analysis_prompt(dot, gene_count=gene_count, library_list=library_list)
+    # New prompt (statistics, communities, semantic DOT) when statistics are available; old prompt otherwise
+    llm_dot = None
+    if llm_export:
+        llm_dot, ai_prompt = llm_export
+    else:
+        ai_prompt = generate_ai_analysis_prompt(dot, gene_count=gene_count, library_list=library_list)
     
     # Display AI prompt section with platform buttons
     st.markdown("---")
@@ -792,7 +798,9 @@ def render_network(
     
     # Always offer downloads with clear labels
     st.markdown(
-        f'**Downloads:** Download network in DOT format {download_link(dot, "iterative_network", "dot")} | Download AI prompt as text file {download_link(ai_prompt, "ai_analysis_prompt", "txt")}',
+        f'**Downloads:** network for drawing (DOT) {download_link(dot, "iterative_network", "dot")}'
+        + (f' | network for AI analysis with communities and statistics (DOT) {download_link(llm_dot, "network_llm", "dot")}' if llm_dot else '')
+        + f' | AI prompt as text file {download_link(ai_prompt, "llm_prompt" if llm_dot else "ai_analysis_prompt", "txt")}',
         unsafe_allow_html=True,
     )
 

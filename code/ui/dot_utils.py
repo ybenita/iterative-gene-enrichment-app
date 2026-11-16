@@ -87,7 +87,7 @@ def _sample_scale_hex(scale_name: str, n: int) -> List[str]:
     return [rgb_to_hex(rgb) for rgb in rgb_list]
 
 
-def _colorize_term_nodes(dot_src: str, hex_color: str) -> str:
+def _colorize_term_nodes(dot_src: str, hex_color: str, library: str = None) -> str:
     """Insert fillcolor for *term* nodes using simple string ops, no regex parsing.
 
     Assumes term lines follow the fixed format:
@@ -103,6 +103,10 @@ def _colorize_term_nodes(dot_src: str, hex_color: str) -> str:
         if 'type="term"' in line and "fillcolor=" not in line:
             term_id = line.strip().split()[0].strip('"')
             colored_terms.append(term_id)
+            if library and "library=" not in line:
+                lib = library.replace('"', '\\"')
+                idx = line.rfind("]")
+                line = line[:idx] + f', library="{lib}"' + line[idx:]
             # inject fillcolor
             if "style=filled," in line:
                 line = line.replace(
@@ -171,7 +175,7 @@ def merge_iterative_dot(
 
     # 1) Colorize each library snippet
     colorized = {
-        lib: _colorize_term_nodes(dot_src, lib_to_color[lib])
+        lib: _colorize_term_nodes(dot_src, lib_to_color[lib], lib)
         for lib, dot_src in per_lib_dots.items()
     }
 

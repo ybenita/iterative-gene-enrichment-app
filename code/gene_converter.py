@@ -8,14 +8,14 @@ import streamlit as st
 logger = logging.getLogger(__name__)
 
 
-@st.cache_data(show_spinner="Loading gene info database...")
+@st.cache_resource(show_spinner="Loading gene info database...")
 def _cached_load_gene_info(gene_info_path: str) -> Tuple[Dict[str, str], Dict[str, str], Dict[str, str]]:
     """Load and cache gene info parsing. Returns (entrez_to_symbol, symbol_to_entrez, synonyms_to_symbol)."""
     entrez_to_symbol: Dict[str, str] = {}
     symbol_to_entrez: Dict[str, str] = {}
     synonyms_to_symbol: Dict[str, str] = {}
     
-    with open(gene_info_path, 'r', encoding='utf-8') as f:
+    with GeneConverter._open(gene_info_path) as f:
         for line_num, line in enumerate(f, 1):
             if line.startswith('#'):
                 continue
@@ -45,12 +45,12 @@ def _cached_load_gene_info(gene_info_path: str) -> Tuple[Dict[str, str], Dict[st
     return entrez_to_symbol, symbol_to_entrez, synonyms_to_symbol
 
 
-@st.cache_data(show_spinner="Loading gene history...")
+@st.cache_resource(show_spinner="Loading gene history...")
 def _cached_load_gene_history(gene_history_path: str) -> Dict[str, str]:
     """Load and cache gene history parsing. Returns old_to_current_symbol mapping."""
     old_to_current_symbol: Dict[str, str] = {}
     
-    with open(gene_history_path, 'r', encoding='utf-8') as f:
+    with GeneConverter._open(gene_history_path) as f:
         for line_num, line in enumerate(f, 1):
             if line.startswith('#'):
                 continue
@@ -94,31 +94,19 @@ class GeneConverter:
                              If None, will look for it in the data/recent_release directory.
         """
         if gene_info_path is None:
-            project_root = Path(__file__).resolve().parent.parent
-            gene_info_path = project_root / "data" / "recent_release" / "Homo_sapiens.gene_info"
-            if not gene_info_path.exists():
-                alt_path = Path.cwd() / "data" / "recent_release" / "Homo_sapiens.gene_info"
-                if alt_path.exists():
-                    gene_info_path = alt_path
-                else:
-                    alt_path2 = Path.cwd().parent / "data" / "recent_release" / "Homo_sapiens.gene_info"
-                    if alt_path2.exists():
-                        gene_info_path = alt_path2
-        
+            gene_info_path = self._find_data_file(["Homo_sapiens.gene_info", "Homo_sapiens.gene_info.gz"])
+            if gene_info_path is None:
+                raise FileNotFoundError(
+                    "NCBI gene info not found. Expected data/recent_release/Homo_sapiens.gene_info(.gz) in the "
+                    "repository. Gene symbols cannot be validated without it, and results would depend on the "
+                    "working directory.")
         self.gene_info_path = Path(gene_info_path)
-        
+
         if gene_history_path is None:
-            project_root = Path(__file__).resolve().parent.parent
-            gene_history_path = project_root / "data" / "recent_release" / "gene_history"
-            if not gene_history_path.exists():
-                alt_path = Path.cwd() / "data" / "recent_release" / "gene_history"
-                if alt_path.exists():
-                    gene_history_path = alt_path
-                else:
-                    alt_path2 = Path.cwd().parent / "data" / "recent_release" / "gene_history"
-                    if alt_path2.exists():
-                        gene_history_path = alt_path2
-        
+            gene_history_path = self._find_data_file(["gene_history", "gene_history_9606.gz", "gene_history.gz"])
+            if gene_history_path is None:
+                logger.warning("NCBI gene history not found in data/recent_release; outdated symbols will not be mapped")
+                gene_history_path = "gene_history_not_found"
         self.gene_history_path = Path(gene_history_path)
         
         # Track conversions for this session
@@ -141,11 +129,31 @@ class GeneConverter:
             logger.warning(f"Gene history file not found at {self.gene_history_path}")
             self.old_to_current_symbol: Dict[str, str] = {}
     
+    @staticmethod
+    def _find_data_file(names):
+        """First existing file among ``names`` in data/recent_release (repository first, then the
+        current directory and its parent, then /data/recent_release)."""
+        here = Path(__file__).resolve().parent.parent
+        for d in (here / "data" / "recent_release", Path.cwd() / "data" / "recent_release",
+                  Path.cwd().parent / "data" / "recent_release", Path("/data") / "recent_release"):
+            for n in names:
+                if (d / n).exists():
+                    return d / n
+        return None
+
+    @staticmethod
+    def _open(path):
+        import gzip
+        path = Path(path)
+        if path.suffix == ".gz":
+            return gzip.open(path, "rt", encoding="utf-8")
+        return open(path, "r", encoding="utf-8")
+
     def _load_gene_info(self) -> None:
         """Load gene information from the NCBI gene info file."""
         logger.info(f"Loading gene info from {self.gene_info_path}")
         
-        with open(self.gene_info_path, 'r', encoding='utf-8') as f:
+        with self._open(self.gene_info_path) as f:
             for line_num, line in enumerate(f, 1):
                 if line.startswith('#'):
                     continue
@@ -195,7 +203,7 @@ class GeneConverter:
         logger.info(f"Loading gene history from {self.gene_history_path}")
         
         try:
-            with open(self.gene_history_path, 'r', encoding='utf-8') as f:
+            with self._open(self.gene_history_path) as f:
                 for line_num, line in enumerate(f, 1):
                     if line.startswith('#'):
                         continue

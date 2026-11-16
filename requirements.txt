@@ -1,25 +1,27 @@
-# Core dependencies for Gene Enrichment Analysis
-# Python 3.10+ required
+# Hosted app (Streamlit Community Cloud). Ranges instead of exact pins so that the app installs from binary
+# wheels on any Python the platform assigns (checked: 3.12, 3.13, 3.14 on x86_64 Linux). Exact versions used
+# for the paper are pinned on the main branch.
 
 # Data manipulation and analysis
-pandas>=2.1.0
-numpy>=1.24.0
+pandas>=2.2.3,<3
+numpy>=1.24,<3
 
 # Statistical analysis
-scipy>=1.11.0
-statsmodels>=0.14.0
+scipy>=1.15.2,<2
+statsmodels>=0.14.4,<0.15
 
 # Visualization
-plotly>=5.18.0
-Pillow>=10.0.0
+plotly>=6.0.1,<7
+Pillow>=11.1.0
 
 # Network analysis and visualization
-networkx>=3.1
-graphviz>=0.20
-pydot>=2.0.0
+networkx>=3.5,<4
+graphviz>=0.21
+pydot>=4.0.1,<5
+igraph>=0.11  # Leiden communities (network_modules.py; falls back to networkx Louvain)
 
 # Web application framework
-streamlit>=1.32.0
+streamlit>=1.48,<2
 
 # Streamlit Cloud specific
 streamlit-option-menu>=0.3.6

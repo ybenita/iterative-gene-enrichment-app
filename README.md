@@ -35,12 +35,12 @@ Access the application directly in your browser — no installation required:
 |---|---|---|
 | **Method** | Standard over-representation analysis | Multi-iteration refinement of gene-term associations |
 | **P-value** | Fisher's exact, hypergeometric, or chi-squared | Fisher's exact, hypergeometric, or chi-squared |
-| **Correction** | FDR-adjusted p-values | Raw p-values per iteration (FDR not applicable) |
+| **Correction** | FDR-adjusted p-values | Empirical q-value per term and network significance, both from random gene lists matched to your run |
 | **Best for** | Quick, standard enrichment | Deep, iterative discovery of enriched pathways |
 
 ### Gene Set Libraries (MSigDB v2025.1)
 
-The app ships with 12 pre-loaded gene set libraries from [MSigDB](https://www.gsea-msigdb.org/gsea/msigdb/):
+The app ships with 12 gene set libraries from [MSigDB](https://www.gsea-msigdb.org/gsea/msigdb/); the 10 used in the iGEA paper are active by default (Human Phenotype Ontology and Protein Interaction are off):
 
 | Collection | Library |
 |---|---|
@@ -66,7 +66,20 @@ Custom libraries in `.gmt` format can be uploaded through the UI.
 - **Hypergeometric Test**
 - **Chi-Squared Test**
 
-P-value filtering uses both raw and FDR-adjusted thresholds. In Iterative mode, only raw p-values are used.
+P-value filtering uses both raw and FDR-adjusted thresholds. Input genes that are not in the background are
+listed and removed, and gene sets are restricted to the background, so the input, the gene sets and the random
+lists share one universe.
+
+### Network statistics, communities and AI interpretation (iterative mode)
+- **Two-level empirical statistics.** Random gene lists of the same size, drawn from your background and analysed
+  with the same collections and parameters (1,000 by default in the hosted app, up to 10,000): a q-value for
+  each term (terms with q < 0.10 form the network; use 1 to keep all) and an empirical p-value for the largest
+  connected cluster of the network.
+- **Communities and hub genes.** Leiden communities of terms linked by shared genes; gene degree (number of
+  collections placing a gene in the network) and bridge genes between communities.
+- **AI-ready export.** A network file for drawing, a network file for AI analysis (communities and statistics as
+  attributes) and a complete prompt for a language model: statistics, communities, network and instructions
+  to interpret each community, combine them, estimate the experiment and cite network genes.
 
 ---
 
