@@ -6,8 +6,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Tuple, Set
 
 import pandas as pd
-from scipy.stats import chi2_contingency, fisher_exact, hypergeom
-from statsmodels.stats.multitest import multipletests
+from scipy.stats import chi2_contingency, false_discovery_control, fisher_exact, hypergeom
 
 from background_gene_set import BackgroundGeneSet
 from gene_set import GeneSet
@@ -282,7 +281,8 @@ class Enrichment:
         # Separate results and p_values for convenience
         p_values = [result[-1] for result in parallel_results]
         # Adjust p-values for multiple testing
-        _, p_values_adjusted, _, _ = multipletests(p_values, method="fdr_bh")
+        # Benjamini-Hochberg (SciPy; same values as statsmodels' fdr_bh up to floating-point rounding)
+        p_values_adjusted = false_discovery_control(p_values, method="bh") if p_values else []
         # Rank terms based on their p-values
         ranked_terms = sorted(
             list(enumerate(parallel_results)), key=lambda x: p_values[x[0]]

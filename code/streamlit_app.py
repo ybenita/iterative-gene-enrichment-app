@@ -31,11 +31,6 @@ from ui.rendering import (
 )
 from ui.utils import download_link, download_file_link, update_aliases
 from ui.per_run_benchmark import ensure_statistics, llm_export_from_state, render_per_run_benchmark
-from ui.benchmarking import (
-    compute_benchmark_for_streamlit,
-    extract_benchmark_table_data,
-    generate_statistical_report_text
-)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -153,18 +148,6 @@ def _ensure_base_state():
         state.iter_max_iter = 30
     if "iter_min_term_size" not in state:
         state.iter_min_term_size = 10
-    if "benchmark_computed" not in state:
-        state.benchmark_computed = False
-    if "benchmark_data" not in state:
-        state.benchmark_data = None
-    if "libraries_with_data" not in state:
-        state.libraries_with_data = []
-    if "libraries_without_data" not in state:
-        state.libraries_without_data = []
-    if "actual_size_used" not in state:
-        state.actual_size_used = None
-    if "benchmark_report_text" not in state:
-        state.benchmark_report_text = None
     if "p_val_method" not in state:
         state.p_val_method = "Fisher's Exact Test"
     if "select_all_libraries" not in state:
@@ -1423,17 +1406,6 @@ Results include ranked tables, bar charts, and network graphs."""
             # Clear progress indicators
             progress_bar.empty()
             status_text.empty()
-            
-            # Reset benchmarking when new iGEA results are computed
-            # This ensures benchmarking recomputes when iGEA is rerun with different parameters
-            if 'benchmark_computed' in state:
-                state.benchmark_computed = False
-                state.benchmark_data = None
-                state.benchmark_report_text = None
-                state.libraries_with_data = []
-                state.libraries_without_data = []
-                if 'last_enrich_hash' in state:
-                    del state.last_enrich_hash
             
             state.iter_ready = True
             state.selected_dot_paths = [

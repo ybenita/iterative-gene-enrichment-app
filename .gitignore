@@ -28,3 +28,6 @@ Thumbs.db
 
 # iGEA Website — deployed separately, not tracked in this repo
 documentation/iGEA website/
+
+# Files written by the app at run time
+results/

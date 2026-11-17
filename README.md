@@ -40,14 +40,13 @@ Access the application directly in your browser — no installation required:
 
 ### Gene Set Libraries (MSigDB v2025.1)
 
-The app ships with 12 gene set libraries from [MSigDB](https://www.gsea-msigdb.org/gsea/msigdb/); the 10 used in the iGEA paper are active by default (Human Phenotype Ontology and Protein Interaction are off):
+The app ships with the 10 gene set libraries from [MSigDB](https://www.gsea-msigdb.org/gsea/msigdb/) used in the iGEA paper:
 
 | Collection | Library |
 |---|---|
 | **Hallmark** | H: Hallmark Gene Sets |
 | **Canonical Pathways (C2)** | BioCarta · KEGG Legacy · KEGG MEDICUS · PID · Reactome · WikiPathways |
-| **Ontology (C5)** | GO Biological Process · GO Cellular Component · GO Molecular Function · Human Phenotype Ontology |
-| **Protein Interaction** | StringDB Protein Interactions |
+| **Ontology (C5)** | GO Biological Process · GO Cellular Component · GO Molecular Function |
 
 Custom libraries in `.gmt` format can be uploaded through the UI.
 
@@ -86,11 +85,17 @@ lists share one universe.
 ## Project Structure
 
 ```
-iterative_enrichment/
+iterative-gene-enrichment-app/
+├── streamlit_app.py              # Entry point for Community Cloud (runs code/streamlit_app.py)
 ├── code/
 │   ├── streamlit_app.py          # Main Streamlit application
 │   ├── enrichment.py             # ORA enrichment engine
 │   ├── iter_enrichment.py        # Iterative enrichment engine
+│   ├── fast_igea.py              # Fast engine for random gene lists (identical results)
+│   ├── per_run_null.py           # Term q-values and network statistics from random lists
+│   ├── network_modules.py        # Communities, hub and bridge genes
+│   ├── llm_export.py             # Network file and prompt for AI analysis
+│   ├── network_connectivity_benchmark.py  # Largest connected cluster
 │   ├── gene_converter.py         # Gene symbol / Entrez ID converter
 │   ├── gene_set.py               # Gene set data model
 │   ├── gene_set_library.py       # GMT library parser
@@ -101,11 +106,8 @@ iterative_enrichment/
 │   │   └── alias.json            # Library metadata & activation config
 │   ├── backgrounds/              # Background gene set files
 │   ├── gene_lists/               # Example gene lists
-│   └── recent_release/           # NCBI gene info files
-├── .streamlit/
-│   └── config.toml               # Streamlit theme & server config
+│   └── recent_release/           # NCBI gene info and gene history (.gz)
 ├── requirements.txt              # Python dependencies
-├── packages.txt                  # System packages (apt) for Cloud
 ├── pyproject.toml                # Project metadata
 └── README.md
 ```
@@ -120,15 +122,13 @@ This repository is configured for **zero-setup deployment** on Streamlit Communi
 
 | File | Purpose |
 |---|---|
-| `requirements.txt` | Python dependencies (installed via `pip`) |
-| `packages.txt` | System-level packages (installed via `apt`) — includes `graphviz` |
-| `.streamlit/config.toml` | Theme, upload limits, and server settings |
+| `requirements.txt` | Python dependencies (installed by Community Cloud; no system packages are needed) |
 
 ### Deploy your own instance
 
 1. Fork this repository to your GitHub account.
 2. Go to [share.streamlit.io](https://share.streamlit.io) and sign in.
-3. Click **New app** → select your fork → set main file to `code/streamlit_app.py`.
+3. Click **New app** → select your fork → set main file to `streamlit_app.py`.
 4. Click **Deploy**. Streamlit will install dependencies and launch the app.
 
 ### Running locally

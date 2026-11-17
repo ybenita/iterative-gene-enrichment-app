@@ -7,8 +7,7 @@ pandas>=2.2.3,<3
 numpy>=1.24,<3
 
 # Statistical analysis
-scipy>=1.15.2,<2
-statsmodels>=0.14.4,<0.15
+scipy>=1.15.2,<2  # incl. Benjamini-Hochberg (false_discovery_control)
 
 # Visualization
 plotly>=6.0.1,<7
@@ -16,12 +15,8 @@ Pillow>=11.1.0
 
 # Network analysis and visualization
 networkx>=3.5,<4
-graphviz>=0.21
 pydot>=4.0.1,<5
 igraph>=0.11  # Leiden communities (network_modules.py; falls back to networkx Louvain)
 
 # Web application framework
 streamlit>=1.48,<2
-
-# Streamlit Cloud specific
-streamlit-option-menu>=0.3.6
