@@ -8,7 +8,7 @@ Semantic DOT
   graph attributes   input size, q-value threshold, random lists, network p-values, community method
   subgraph cluster_Cn  one per community (Leiden on the term network, see network_modules.py);
                      holds its terms and the genes that belong only to it
-  term nodes         label, library, iteration, p, q, community, genes (= number of genes)
+  term nodes         label, collection, iteration, p, q, community, genes (= number of genes)
   gene nodes         degree (= number of terms; at most one per collection in iGEA), community;
                      bridge genes (terms in more than one community) sit outside every cluster and
                      carry bridge=true and their participation coefficient
@@ -132,7 +132,7 @@ def semantic_dot(terms: Iterable[Dict], modules=None, stats: Optional[Dict] = No
         lines.append(f"  graph [community_method={_q(s['method'])}{extra}];")
 
     def term_node(t):
-        a = [f"type=term", f"label={_q(t['term'])}", f"library={_q(t['library'])}"]
+        a = [f"type=term", f"label={_q(t['term'])}", f"collection={_q(t['library'])}"]
         if t.get("iteration") not in (None, ""):
             a.append(f"iteration={int(t['iteration'])}")
         if _num(t.get("p")):
@@ -186,9 +186,9 @@ def semantic_dot(terms: Iterable[Dict], modules=None, stats: Optional[Dict] = No
 
 
 INTRO = ("Below is an iterative gene set enrichment (iGEA) network computed from a gene list. Iterative means that "
-         "for each library source, the top enriched gene set is found, saved and its genes are removed from the gene "
-         "list; the remaining genes are then tested again. Thus each gene appears at most once per library source but "
-         "can be linked to terms from different libraries. The network of genes and gene sets (= terms) is given in "
+         "for each gene set collection, the top enriched gene set is found, saved and its genes are removed from the gene "
+         "list; the remaining genes are then tested again. Thus each gene appears at most once per collection but "
+         "can be linked to terms from different collections. The network of genes and gene sets (= terms) is given in "
          "DOT format, preceded by its statistics and communities.")
 
 
@@ -236,7 +236,7 @@ def _community_section(modules) -> str:
     rows = "\n".join(f"| {r['Community']} | {r['Terms']} | {r['Genes']} | {r['Lead term']} | "
                      f"{r['Top hub genes (degree)']} | {r['Bridge genes']} |" for _, r in modules.communities.iterrows())
     return f"""**COMMUNITIES:**
-{how} Communities are algorithmic groupings, not biological labels; the cluster blocks in the DOT list each community's terms and genes. Gene degree is the number of terms a gene connects to; in iGEA this equals the number of library sources that place the gene in the network. Bridge genes connect terms in different communities.
+{how} Communities are algorithmic groupings, not biological labels; the cluster blocks in the DOT list each community's terms and genes. Gene degree is the number of terms a gene connects to; in iGEA this equals the number of collections that place the gene in the network. Bridge genes connect terms in different communities.
 
 | Community | Terms | Genes | Lead term (most genes) | Top hub genes (degree) | Bridge genes |
 |---|---|---|---|---|---|
@@ -247,11 +247,11 @@ def _community_section(modules) -> str:
 def _guide_and_task(libs: str, comm_guide: str) -> str:
     """Background on the DOT attributes, then the writing task (narrative interpretation)."""
     return f"""**NETWORK INTERPRETATION GUIDE (background):**
-- **Term nodes** (`type=term`): enriched gene sets, with `library` (source collection), `iteration`, `p` (enrichment p-value in its iteration), `q` (term q-value) and `genes` (number of genes linked)
-- **Gene nodes** (`type=gene`): input genes, with `degree` (number of terms the gene connects to; in iGEA, the number of library sources that place it in the network){comm_guide}
+- **Term nodes** (`type=term`): enriched gene sets, with `collection` (source gene set collection), `iteration`, `p` (enrichment p-value in its iteration), `q` (term q-value) and `genes` (number of genes linked)
+- **Gene nodes** (`type=gene`): input genes, with `degree` (number of terms the gene connects to; in iGEA, the number of collections that place it in the network){comm_guide}
 - **Edges**: each line `"term" -- {{"GENE1" "GENE2" ...}}` links a term to its genes. Edges are gene-set memberships from curated annotation, not physical interactions or directions of change.
 
-**Library Sources:**
+**Gene Set Collections:**
 {libs}
 
 **YOUR TASK:**

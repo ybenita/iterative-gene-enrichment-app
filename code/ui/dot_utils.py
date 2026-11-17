@@ -103,10 +103,10 @@ def _colorize_term_nodes(dot_src: str, hex_color: str, library: str = None) -> s
         if 'type="term"' in line and "fillcolor=" not in line:
             term_id = line.strip().split()[0].strip('"')
             colored_terms.append(term_id)
-            if library and "library=" not in line:
+            if library and "collection=" not in line:
                 lib = library.replace('"', '\\"')
                 idx = line.rfind("]")
-                line = line[:idx] + f', library="{lib}"' + line[idx:]
+                line = line[:idx] + f', collection="{lib}"' + line[idx:]
             # inject fillcolor
             if "style=filled," in line:
                 line = line.replace(
