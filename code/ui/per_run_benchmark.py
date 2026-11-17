@@ -112,17 +112,22 @@ def ensure_statistics(st, state, library_names) -> bool:
     return True
 
 
+def render_q_threshold(st) -> None:
+    """Term q-value threshold, shown next to the iteration p-value threshold."""
+    st.number_input("Term q-value threshold (1 = keep all terms)", min_value=0.01, max_value=1.0,
+                    value=DEFAULT_Q_THRESHOLD, step=0.01, format="%.2f", key="null_q_threshold",
+                    help="Correction of the iteration p-values: the q-value is the empirical false discovery rate "
+                         "estimated from the random gene lists. Terms with q below this threshold form the network; "
+                         "random lists are filtered the same way.")
+
+
 def render_statistics_settings(st, default_n_lists: int = 10000, max_n_lists: int = 100000) -> None:
-    """Statistics settings, shown with the analysis parameters so the first run already uses them."""
+    """Random-list settings, shown with the analysis parameters so the first run already uses them."""
     st.number_input("Number of random lists", min_value=100, max_value=max_n_lists, value=default_n_lists,
                     step=100, key="null_n_lists",
                     help="Random gene lists of your input size, drawn from your background and analysed with the "
                          "same collections and parameters. More lists give more precise q-values and p-values "
                          "(smallest attainable p = 1 / (lists + 1)) but take longer.")
-    st.number_input("Term q-value threshold (1 = keep all terms)", min_value=0.01, max_value=1.0,
-                    value=DEFAULT_Q_THRESHOLD, step=0.01, format="%.2f", key="null_q_threshold",
-                    help="Terms with an empirical q-value below this threshold form the network; random lists "
-                         "are filtered the same way.")
     st.number_input("Random seed", min_value=0, value=DEFAULT_SEED, step=1, key="null_seed",
                     help="Fixes the random lists, so results are reproducible.")
 
