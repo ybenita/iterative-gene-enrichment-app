@@ -4,7 +4,7 @@ version = "0.0.1"
 description = "Iterative Gene Enrichment Analysis - A tool for gene set enrichment analysis with iterative mode and statistical benchmarking"
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "MIT" }
+license = { text = "GPL-3.0-only" }
 authors = [{ name = "Maxim Kuleshov", email = "kuleshov.max.v@gmail.com" }]
 
 # Runtime dependencies
