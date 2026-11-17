@@ -261,13 +261,42 @@ def render_per_run_benchmark(st, state, download_link: Callable, default_n_lists
                 unsafe_allow_html=True)
 
 
-def llm_export_from_state(state):
-    """(semantic DOT, LLM prompt) for the current network, or None if statistics are not available.
-
-    Uses the terms retained by the q-value filter, the communities computed on them and the network
-    statistics, for the collections the statistics refer to (the collections chosen for the network)."""
+def network_from_state(state):
+    """The network that is tested, drawn and sent to the LLM: the terms that passed the q-value filter
+    (collections chosen for the network), the communities computed on them and the statistics.
+    Returns dict(terms, modules, stats) or None if statistics are not available."""
     stored = state.get("per_run_benchmark")
     if not stored:
+        return None
+    try:
+        from llm_export import network_stats
+        sub = _subset(state)
+        terms_df = stored["terms"]
+        info = {(r["Library"], r["Term"]): (r["q-value"], bool(r["Kept"])) for _, r in terms_df.iterrows()}
+        terms = []
+        for lib_name, it in sub.items():
+            for r in it.results:
+                q, kept = info.get((lib_name, r.get("Term_raw", r.get("Term"))), (None, False))
+                if kept:
+                    terms.append(dict(library=lib_name, term=r.get("Term", ""), iteration=r.get("Iteration"),
+                                      p=r.get("iteration p-value"), q=q,
+                                      genes=r.get("Genes removed for next iteration", [])))
+        n_genes = next(iter(sub.values())).gene_set.size
+        stats = network_stats(stored["table"], stored["attrs"], stored["observed"], n_genes)
+        return {"terms": terms, "modules": stored.get("modules"), "stats": stats}
+    except Exception:
+        return None
+
+
+def llm_export_from_state(state, network=None):
+    """(semantic DOT, LLM prompt) for the current network, or None if statistics are not available."""
+    network = network or network_from_state(state)
+    if not network:
+        return None
+    try:
+        from llm_export import export_for_llm
+        return export_for_llm(network["terms"], network["modules"], network["stats"])
+    except Exception:
         return None
     try:
         from llm_export import export_for_llm, network_stats

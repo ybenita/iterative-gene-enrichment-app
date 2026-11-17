@@ -30,7 +30,7 @@ from ui.rendering import (
     render_ora_igea_comparison,
 )
 from ui.utils import download_link, download_file_link, update_aliases
-from ui.per_run_benchmark import (ensure_statistics, llm_export_from_state, render_per_run_benchmark,
+from ui.per_run_benchmark import (ensure_statistics, llm_export_from_state, network_from_state, render_per_run_benchmark,
                                   render_q_threshold, render_statistics_settings,
                                   run_statistics_after_analysis, term_stats)
 
@@ -1611,14 +1611,16 @@ Results include ranked tables, bar charts, and network graphs."""
                     # Get gene count and library list for AI prompt
                     gene_count = state.gene_set.size if hasattr(state, 'gene_set') and state.gene_set else None
                     library_list = chosen if chosen else None
+                    net = network_from_state(state)
                     render_network(state.last_merged_dot, gene_count=gene_count, library_list=library_list,
-                                   llm_export=llm_export_from_state(state))
+                                   llm_export=llm_export_from_state(state, net), network=net)
         elif state.network_generated and state.selected_dot_paths:
             # Get gene count and library list for AI prompt
             gene_count = state.gene_set.size if hasattr(state, 'gene_set') and state.gene_set else None
             library_list = state.selected_dot_paths if state.selected_dot_paths else None
+            net = network_from_state(state)
             render_network(state.last_merged_dot, gene_count=gene_count, library_list=library_list,
-                           llm_export=llm_export_from_state(state))
+                           llm_export=llm_export_from_state(state, net), network=net)
 
     logger.info("Finishing the Streamlit app")
 

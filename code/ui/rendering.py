@@ -717,7 +717,8 @@ def render_network(
     title: str = "Iterative Enrichment Network",
     gene_count: int = None,
     library_list: List[str] = None,
-    llm_export: tuple = None
+    llm_export: tuple = None,
+    network: dict = None,
 ) -> None:
     """
     Render a bipartite network graph of iterative enrichment across libraries.
@@ -736,10 +737,48 @@ def render_network(
     st.divider()
     st.subheader(title)
     
-    # Count edges to check network size
+    if network and network.get("terms"):
+        # The network that is tested and sent to the LLM: kept terms, communities, hubs and bridges
+        render_network_figure(network)
+        dot = llm_export[0] if llm_export else dot
+    else:
+        render_network_from_dot(dot)
+
+    _render_prompt_section(dot, gene_count, library_list, llm_export, network)
+
+
+def render_network_figure(network: dict) -> None:
+    from ui.dot_utils import load_library_colors
+    from ui.network_plot import MAX_EDGES, n_edges, network_figure
+
+    terms, mods = network["terms"], network.get("modules")
+    has_comm = mods is not None and len(getattr(mods, "terms", []))
+    ne = n_edges(terms)
+    st.caption(f"{len(terms)} terms (q-value filter passed), "
+               f"{len({g for t in terms for g in t['genes']})} genes, {ne} edges"
+               + (f", {mods.summary['n_communities']} communities" if has_comm else "")
+               + ". Squares: terms. Circles: genes, sized by degree (number of terms). "
+                 "Diamonds: bridge genes (terms in more than one community). Hover for details; "
+                 "click a legend entry to hide it.")
+    c1, c2 = st.columns(2)
+    colour_by = c1.radio("Colour by", ["Community", "Collection"] if has_comm else ["Collection"],
+                         horizontal=True, key="net_colour_by")
+    labels = c2.radio("Labels", ["Hub genes", "Hub genes and terms", "None"], horizontal=True, key="net_labels")
+    if ne > MAX_EDGES:
+        st.warning(f"⚠️ Network too large to draw here ({ne} edges). Download the DOT file below to view it "
+                   "in Graphviz or Cytoscape; the communities table is under Network statistics.")
+        return
+    lib_colours = {v: k for k, v in load_library_colors().items()}
+    st.plotly_chart(network_figure(terms, mods, colour_by, labels, lib_colours), use_container_width=True,
+                    key="network_chart", theme=None,
+                    config={"scrollZoom": True, "displaylogo": False})
+
+
+def render_network_from_dot(dot: str) -> None:
+    """Fallback without statistics: draw the merged per-collection DOT."""
     from ui.dot_utils import count_edges_in_dot
     edge_count = count_edges_in_dot(dot)
-    
+
     # Check if network is too large for Plotly rendering
     if edge_count <= 500:
         # Render Plotly network as usual
@@ -752,6 +791,9 @@ def render_network(
             "Download the DOT file to view in external tools like Graphviz."
         )
     
+
+
+def _render_prompt_section(dot, gene_count, library_list, llm_export, network) -> None:
     # Generate AI prompt - this is the source of truth for both clipboard and download
     # New prompt (statistics, communities, semantic DOT) when statistics are available; old prompt otherwise
     llm_dot = None
@@ -809,8 +851,9 @@ def render_network(
     
     # Always offer downloads with clear labels
     st.markdown(
-        f'**Downloads:** network for drawing (DOT) {download_link(dot, "iterative_network", "dot")}'
-        + (f' | network for AI analysis with communities and statistics (DOT) {download_link(llm_dot, "network_llm", "dot")}' if llm_dot else '')
+        (f'**Downloads:** network with communities and statistics, as drawn above and sent to the AI (DOT) '
+         f'{download_link(llm_dot, "network_llm", "dot")}' if llm_dot else
+         f'**Downloads:** network for drawing (DOT) {download_link(dot, "iterative_network", "dot")}')
         + f' | AI prompt as text file {download_link(ai_prompt, "llm_prompt" if llm_dot else "ai_analysis_prompt", "txt")}',
         unsafe_allow_html=True,
     )
