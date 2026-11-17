@@ -749,7 +749,7 @@ def render_network(
 
 def render_network_figure(network: dict) -> None:
     from ui.dot_utils import load_library_colors
-    from ui.network_plot import MAX_EDGES, n_edges, network_figure
+    from ui.network_plot import LABEL_OPTIONS, MAX_EDGES, n_edges, network_figure
 
     terms, mods = network["terms"], network.get("modules")
     has_comm = mods is not None and len(getattr(mods, "terms", []))
@@ -757,13 +757,15 @@ def render_network_figure(network: dict) -> None:
     st.caption(f"{len(terms)} terms (q-value filter passed), "
                f"{len({g for t in terms for g in t['genes']})} genes, {ne} edges"
                + (f", {mods.summary['n_communities']} communities" if has_comm else "")
-               + ". Squares: terms. Circles: genes, sized by degree (number of terms). "
-                 "Diamonds: bridge genes (terms in more than one community). Hover for details; "
-                 "click a legend entry to hide it.")
+               + ". Squares: terms; each community is titled with its lead term (dark outline); hover for the other terms. "
+                 "Circles: genes, sized by degree (number of terms). Diamonds: bridge genes (terms in more "
+                 "than one community). **Double-click a community in the legend to show it alone** "
+                 "(double-click again to show all); scroll to zoom; use the fullscreen button at the top "
+                 "right of the chart for a larger view.")
     c1, c2 = st.columns(2)
     colour_by = c1.radio("Colour by", ["Community", "Collection"] if has_comm else ["Collection"],
                          horizontal=True, key="net_colour_by")
-    labels = c2.radio("Labels", ["Hub genes", "Hub genes and terms", "None"], horizontal=True, key="net_labels")
+    labels = c2.radio("Labels", LABEL_OPTIONS, horizontal=True, key="net_labels")
     if ne > MAX_EDGES:
         st.warning(f"⚠️ Network too large to draw here ({ne} edges). Download the DOT file below to view it "
                    "in Graphviz or Cytoscape; the communities table is under Network statistics.")

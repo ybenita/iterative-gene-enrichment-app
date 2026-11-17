@@ -42,6 +42,22 @@ def _short(s: str, n: int = 42) -> str:
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
+def _wrap(s: str, width: int = 26, max_lines: int = 3) -> str:
+    """Wrap a term name onto a few short lines (Plotly <br>)."""
+    lines, cur = [], ""
+    for w in s.split():
+        if cur and len(cur) + 1 + len(w) > width:
+            lines.append(cur)
+            cur = w
+        else:
+            cur = f"{cur} {w}".strip()
+    lines.append(cur)
+    if len(lines) > max_lines:
+        lines = lines[:max_lines]
+        lines[-1] = lines[-1][: width - 1] + "…"
+    return "<br>".join(lines)
+
+
 def n_edges(terms: List[Dict]) -> int:
     return sum(len(set(t["genes"])) for t in terms)
 
@@ -111,64 +127,50 @@ def _hull(points, pad: float):
     return poly + poly[:1]
 
 
-def network_figure(terms: List[Dict], modules=None, colour_by: str = "Community", labels: str = "Hub genes",
-                   collection_colours: Optional[Dict[str, str]] = None, n_hub_labels: int = 15,
-                   height: int = 850) -> go.Figure:
+LABEL_OPTIONS = ["Hub genes and lead terms", "Hub genes", "None"]
+
+
+def network_figure(terms: List[Dict], modules=None, colour_by: str = "Community",
+                   labels: str = "Hub genes and lead terms", collection_colours: Optional[Dict[str, str]] = None,
+                   n_hub_labels: int = 15, height: int = 900) -> go.Figure:
     """Plotly figure of the network.
 
     :param terms: kept terms, records with library, term, genes and optionally iteration, p, q.
     :param modules: NetworkModules computed on the same terms (None: no communities).
     :param colour_by: "Community" or "Collection".
-    :param labels: "Hub genes", "Hub genes and terms" or "None".
+    :param labels: one of LABEL_OPTIONS. Lead term = the community's term with the most genes (the
+        "Lead term" of the communities table): named in the community's title and outlined in dark;
+        all other term names are shown on hover.
+
+    In community mode every element of a community (area, label, terms, genes including its bridge
+    genes, edges) shares one legend group: double-clicking a community in the legend shows it alone.
     """
     terms = [t for t in terms if list(t.get("genes", []))]
     term_comm, gene_info, deg = _build(terms, modules)
     if not term_comm:
         colour_by = "Collection"
+    by_comm = colour_by == "Community"
     pos = _layout(terms, term_comm, gene_info)
     collection_colours = collection_colours or {}
     libs = list(dict.fromkeys(t["library"] for t in terms))
+    comm_rows = list(modules.communities.to_dict("records")) if term_comm else []
+    lead = {r["Community"]: r["Lead term"] for r in comm_rows}
     traces: List[go.Scatter] = []
-    annotations = []
 
-    # community areas
-    xs = [p[0] for p in pos.values()] or [0]
-    ys = [p[1] for p in pos.values()] or [0]
-    pad = 0.03 * max(max(xs) - min(xs), max(ys) - min(ys), 1e-9)
-    if term_comm:
-        comms = list(modules.communities.itertuples())
-        for row in comms:
-            c = row.Community
-            pts = [pos[("T", i)] for i, t in enumerate(terms) if term_comm.get((t["library"], t["term"])) == c]
-            pts += [pos[("G", g)] for g in deg if g in gene_info and gene_info[g].Community == c
-                    and not gene_info[g].Bridge]
-            if not pts:
-                continue
-            poly = _hull(pts, pad)
-            col = community_colour(c) if colour_by == "Community" else OTHER
-            traces.append(go.Scatter(x=[p[0] for p in poly], y=[p[1] for p in poly], mode="lines", fill="toself",
-                                     fillcolor=_rgba(col, 0.10), line=dict(width=1, color=_rgba(col, 0.35)),
-                                     hoverinfo="skip", showlegend=False))
-            top = max(poly, key=lambda p: p[1])
-            annotations.append(dict(x=top[0], y=top[1], text=f"<b>{c}</b>", showarrow=False, yshift=8,
-                                    font=dict(size=13, color=INK)))
+    def gene_comm(g):
+        gi = gene_info.get(g)
+        return gi.Community if gi is not None else None
 
-    # edges (one trace)
-    ex, ey = [], []
-    for i, t in enumerate(terms):
-        x0, y0 = pos[("T", i)]
-        for g in set(t["genes"]):
-            x1, y1 = pos[("G", g)]
-            ex += [x0, x1, None]
-            ey += [y0, y1, None]
-    traces.append(go.Scatter(x=ex, y=ey, mode="lines", line=dict(width=0.8, color=EDGE), hoverinfo="skip",
-                             showlegend=False))
+    def term_c(i):
+        return term_comm.get((terms[i]["library"], terms[i]["term"]))
 
-    def term_hover(t):
-        c = term_comm.get((t["library"], t["term"]))
+    # ---- hover texts
+    def term_hover(i):
+        t = terms[i]
+        c = term_c(i)
         s = f"<b>{t['term']}</b><br>{t['library']}"
         if c:
-            s += f"<br>Community {c}"
+            s += f"<br>Community {c}" + (" (lead term)" if lead.get(c) == t["term"] else "")
         if t.get("iteration") not in (None, ""):
             s += f"<br>Iteration {t['iteration']}"
         if t.get("p") is not None:
@@ -186,67 +188,125 @@ def network_figure(terms: List[Dict], modules=None, colour_by: str = "Community"
                 s += f"<br>Bridge gene: {gi.Communities} communities (participation {gi.Participation:.2f})"
         return s
 
-    hubs = [g for g in sorted(deg, key=lambda g: (-deg[g], g)) if deg[g] >= 2][:n_hub_labels]
-    label_terms = labels == "Hub genes and terms"
+    hubs = set([g for g in sorted(deg, key=lambda g: (-deg[g], g)) if deg[g] >= 2][:n_hub_labels])
     label_genes = labels != "None"
+    label_lead = labels == "Hub genes and lead terms"
     gsize = lambda g: min(6 + 3 * deg[g], 30)
-    tsize = lambda t: min(10 + 1.6 * math.sqrt(len(set(t["genes"]))) * 2, 30)
+    tsize = lambda i: min(10 + 3.2 * math.sqrt(len(set(terms[i]["genes"]))), 30)
+    xs = [p[0] for p in pos.values()] or [0]
+    ys = [p[1] for p in pos.values()] or [0]
+    span = max(max(xs) - min(xs), max(ys) - min(ys), 1e-9)
+    pad = 0.03 * span
+    px = 950 / (span * 1.2)   # approximate pixels per layout unit (for title sizes)
 
-    def add_terms(idx, colour, name, group, show):
+    # ---- building blocks
+    def area(c, colour, group):
+        pts = [pos[("T", i)] for i in range(len(terms)) if term_c(i) == c]
+        pts += [pos[("G", g)] for g in deg if gene_comm(g) == c and not gene_info[g].Bridge]
+        if not pts:
+            return
+        poly = _hull(pts, pad)
+        traces.append(go.Scatter(x=[p[0] for p in poly], y=[p[1] for p in poly], mode="lines", fill="toself",
+                                 fillcolor=_rgba(colour, 0.10), line=dict(width=1, color=_rgba(colour, 0.35)),
+                                 hoverinfo="skip", showlegend=False, legendgroup=group))
+        title = f"<b>{c}</b>" + (f"<br>{_wrap(lead[c], 30)}" if label_lead and lead.get(c) else "")
+        x, y, where = _title_spot(poly, title)
+        traces.append(go.Scatter(x=[x], y=[y], mode="text", text=[title], textposition=f"{where} center",
+                                 textfont=dict(size=13, color=INK), hoverinfo="skip", showlegend=False,
+                                 legendgroup=group))
+        # invisible point where the title ends, so the axes (also of an isolated community) include it
+        n_lines = title.count("<br>") + 1
+        dy = (n_lines * 17 + 6) / px
+        traces.append(go.Scatter(x=[x], y=[y + dy if where == "top" else y - dy], mode="markers",
+                                 marker=dict(size=1, opacity=0), hoverinfo="skip", showlegend=False,
+                                 legendgroup=group))
+
+    def _title_spot(poly, title):
+        """Above or below the area, whichever covers fewer nodes."""
+        lines = title.replace("<b>", "").replace("</b>", "").split("<br>")
+        w = max(len(l) for l in lines) * 7.5 / px / 2
+        h = (len(lines) * 17 + 6) / px
+        best = None
+        for where in ("top", "bottom"):
+            p = max(poly, key=lambda q: q[1]) if where == "top" else min(poly, key=lambda q: q[1])
+            y0, y1 = (p[1], p[1] + h) if where == "top" else (p[1] - h, p[1])
+            hits = sum(1 for (qx, qy) in pos.values() if abs(qx - p[0]) <= w and y0 <= qy <= y1)
+            if best is None or hits < best[0]:
+                best = (hits, p[0], p[1], where)
+        return best[1], best[2], best[3]
+
+    def edges(idx, group):
+        ex, ey = [], []
+        for i in idx:
+            x0, y0 = pos[("T", i)]
+            for g in set(terms[i]["genes"]):
+                x1, y1 = pos[("G", g)]
+                ex += [x0, x1, None]
+                ey += [y0, y1, None]
+        if ex:
+            traces.append(go.Scatter(x=ex, y=ey, mode="lines", line=dict(width=0.8, color=EDGE), hoverinfo="skip",
+                                     showlegend=False, legendgroup=group))
+
+    def term_marks(idx, colour, name, group, show):
         if not idx:
             return
         traces.append(go.Scatter(
-            x=[pos[("T", i)][0] for i in idx], y=[pos[("T", i)][1] for i in idx],
-            mode="markers+text" if label_terms else "markers",
-            text=[_short(terms[i]["term"]) for i in idx] if label_terms else None,
-            textposition="bottom center", textfont=dict(size=10, color=INK),
-            marker=dict(symbol="square", size=[tsize(terms[i]) for i in idx], color=colour,
-                        line=dict(width=1.5, color="white")),
-            hovertext=[term_hover(terms[i]) for i in idx], hoverinfo="text",
-            name=name, legendgroup=group, showlegend=show))
+            x=[pos[("T", i)][0] for i in idx], y=[pos[("T", i)][1] for i in idx], mode="markers",
+            marker=dict(symbol="square", size=[tsize(i) for i in idx], color=colour,
+                        line=dict(width=[2.5 if is_lead(i) else 1.5 for i in idx],
+                                  color=[INK if is_lead(i) else "white" for i in idx])),
+            hovertext=[term_hover(i) for i in idx], hoverinfo="text", name=name, legendgroup=group, showlegend=show))
 
-    def add_genes(gs, colours, name, group, show, symbol="circle"):
+    def is_lead(i):
+        return label_lead and term_c(i) is not None and lead.get(term_c(i)) == terms[i]["term"]
+
+    def gene_marks(gs, colours, name, group, show, symbol="circle"):
         if not gs:
             return
+        diamond = symbol == "diamond"
         traces.append(go.Scatter(
             x=[pos[("G", g)][0] for g in gs], y=[pos[("G", g)][1] for g in gs],
             mode="markers+text" if label_genes else "markers",
             text=[g if g in hubs else "" for g in gs] if label_genes else None,
             textposition="top center", textfont=dict(size=11, color=INK),
             marker=dict(symbol=symbol, size=[gsize(g) for g in gs], color=colours,
-                        line=dict(width=1.5 if symbol == "diamond" else 1, color=INK if symbol == "diamond" else "white")),
-            hovertext=[gene_hover(g) for g in gs], hoverinfo="text",
-            name=name, legendgroup=group, showlegend=show))
+                        line=dict(width=1.5 if diamond else 1, color=INK if diamond else "white")),
+            hovertext=[gene_hover(g) for g in gs], hoverinfo="text", name=name, legendgroup=group, showlegend=show))
 
-    bridges = [g for g in deg if g in gene_info and gene_info[g].Bridge]
-    if colour_by == "Community":
-        for _, row in modules.communities.iterrows():
-            c = row["Community"]
+    if by_comm:
+        for r in comm_rows:
+            c = r["Community"]
             col = community_colour(c)
-            idx = [i for i, t in enumerate(terms) if term_comm.get((t["library"], t["term"])) == c]
-            gs = [g for g in deg if g in gene_info and gene_info[g].Community == c and not gene_info[g].Bridge]
-            add_terms(idx, col, f"{c} · {_short(row['Lead term'], 36)} ({row['Terms']} terms, {row['Genes']} genes)", c, True)
-            add_genes(gs, col, c, c, False)
-        add_genes(bridges, [community_colour(gene_info[g].Community) for g in bridges],
-                  f"Bridge genes ({len(bridges)})", "bridge", True, symbol="diamond")
-        rest = [g for g in deg if g not in gene_info]
-        add_genes(rest, OTHER, "Other genes", "other", False)
+            idx = [i for i in range(len(terms)) if term_c(i) == c]
+            area(c, col, c)
+            edges(idx, c)
+            term_marks(idx, col, f"{c} · {_short(r['Lead term'], 40)} ({r['Terms']} terms, {r['Genes']} genes)", c, True)
+            gene_marks([g for g in deg if gene_comm(g) == c and not gene_info[g].Bridge], col, c, c, False)
+            gene_marks([g for g in deg if gene_comm(g) == c and gene_info[g].Bridge], col, c, c, False, "diamond")
+        rest_i = [i for i in range(len(terms)) if not term_c(i)]
+        edges(rest_i, "other")
+        term_marks(rest_i, OTHER, "Other terms", "other", True)
+        gene_marks([g for g in deg if g not in gene_info], OTHER, "Other genes", "other", False)
     else:
+        for r in comm_rows:
+            area(r["Community"], OTHER, "areas")
+        edges(list(range(len(terms))), "edges")
         for k, lib in enumerate(libs):
             col = collection_colours.get(lib) or COMMUNITY_COLOURS[k % len(COMMUNITY_COLOURS)]
-            idx = [i for i, t in enumerate(terms) if t["library"] == lib]
-            add_terms(idx, col, f"{lib} ({len(idx)})", lib, True)
-        plain = [g for g in deg if g not in bridges]
-        add_genes(plain, OTHER, "Genes", "genes", True)
-        add_genes(bridges, OTHER, f"Bridge genes ({len(bridges)})", "bridge", True, symbol="diamond")
+            idx = [i for i in range(len(terms)) if terms[i]["library"] == lib]
+            term_marks(idx, col, f"{lib} ({len(idx)})", lib, True)
+        bridges = [g for g in deg if g in gene_info and gene_info[g].Bridge]
+        gene_marks([g for g in deg if g not in bridges], OTHER, "Genes", "genes", True)
+        gene_marks(bridges, OTHER, f"Bridge genes ({len(bridges)})", "bridge", True, symbol="diamond")
 
     fig = go.Figure(data=traces)
     fig.update_layout(
         template="plotly_white", height=height, margin=dict(l=10, r=10, t=10, b=10),
         xaxis=dict(visible=False), yaxis=dict(visible=False, scaleanchor="x"),
-        legend=dict(title=dict(text="Community" if colour_by == "Community" else "Collection"),
-                    font=dict(size=11, color=INK), itemsizing="constant", bgcolor="rgba(255,255,255,0.85)"),
-        annotations=annotations, hoverlabel=dict(bgcolor="white", font=dict(color=INK)),
+        legend=dict(orientation="h", x=0, xanchor="left", y=-0.01, yanchor="top",
+                    title=dict(text="Community: " if by_comm else "Collection: "),
+                    font=dict(size=11, color=INK), itemsizing="constant"),
+        hoverlabel=dict(bgcolor="white", font=dict(color=INK)),
         dragmode="pan",
     )
     return fig
