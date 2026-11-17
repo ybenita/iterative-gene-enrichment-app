@@ -31,7 +31,8 @@ from ui.rendering import (
 )
 from ui.utils import download_link, download_file_link, update_aliases
 from ui.per_run_benchmark import (ensure_statistics, llm_export_from_state, render_per_run_benchmark,
-                                  render_q_threshold, render_statistics_settings)
+                                  render_q_threshold, render_statistics_settings,
+                                  run_statistics_after_analysis, term_stats)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -1364,8 +1365,8 @@ Results include ranked tables, bar charts, and network graphs."""
                         gene_set=state.gene_set,
                         gene_set_library=gsl,
                         background_gene_set=state.background_gene_set,
-                        min_term_size=state.min_term_size,
-                        max_term_size=state.max_term_size,
+                        min_term_size=state.iter_min_term_size,
+                        max_term_size=state.iter_max_term_size,
                         p_value_method_name=state.p_val_method,
                         p_threshold=state.iter_p_threshold,
                         max_iterations=(
@@ -1397,7 +1398,12 @@ Results include ranked tables, bar charts, and network graphs."""
             # Clear progress indicators
             progress_bar.empty()
             status_text.empty()
-            
+
+            # Statistics right after the iterations (own progress bar): term q-values and network p-value
+            # Streamlit Community Cloud: 0.078-2 CPUs and 690 MB-2.7 GB memory per app, so the random
+            # lists run in this process (no worker processes); default 1,000 lists (max 10,000).
+            run_statistics_after_analysis(st, state, default_n_lists=1000, n_jobs=1, grid_lists=200)
+
             state.iter_ready = True
             state.selected_dot_paths = [
                 lib for lib, it in state.iter_enrich.items()
@@ -1493,7 +1499,8 @@ Results include ranked tables, bar charts, and network graphs."""
         available_libraries = sort_libraries(list(state.iter_enrich.keys()))
         for lib in available_libraries:
             it = state.iter_enrich[lib]
-            render_iter_results(it, lib)
+            lib_stats, q_thr = term_stats(state, lib)
+            render_iter_results(it, lib, lib_stats, q_thr)
             # Sanitize library name for widget key (replace special characters)
             safe_lib_name = lib.replace(':', '_').replace(' ', '_').replace('-', '_')
             st.checkbox(
@@ -1538,11 +1545,9 @@ Results include ranked tables, bar charts, and network graphs."""
         else:
             logger.info("Comparison not displayed - no iterative results")
 
-        # Statistical Benchmarking Section (per-run random-list null)
-        # Streamlit Community Cloud: 0.078-2 CPUs and 690 MB-2.7 GB memory per app, so the random
-        # lists run in this process (no worker processes) and the default is 1,000 lists (max 10,000).
+        # Network statistics (largest cluster vs random lists; communities and hub genes)
         st.markdown("---")
-        st.header("📊 Statistics (random gene lists)")
+        st.header("📊 Network statistics")
         render_per_run_benchmark(st, state, download_link, default_n_lists=1000, max_n_lists=10000, n_jobs=1, grid_lists=200)
 
         # Network section

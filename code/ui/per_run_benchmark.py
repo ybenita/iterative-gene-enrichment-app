@@ -57,7 +57,7 @@ def _compute(st, state, sub: Dict, n_lists: int, q_threshold: float, seed: int,
     params = dict(p_value_method=first.p_value_method_name, p_threshold=first.p_threshold,
                   min_overlap=first.min_overlap, min_term_size=first.min_term_size,
                   max_term_size=first.max_term_size, max_iterations=first.max_iterations)
-    bar = st.progress(0.0, text="Analysing random gene lists…")
+    bar = st.progress(0.0, text="Statistics: analysing random gene lists…")
     t0 = time.time()
 
     def progress(done, total, label):
@@ -77,6 +77,8 @@ def _compute(st, state, sub: Dict, n_lists: int, q_threshold: float, seed: int,
               "libraries": list(sub.keys()), "table": table, "report": report,
               "terms": terms, "null": null, "observed": observed, "attrs": dict(attrs)}
     state.per_run_benchmark = stored
+    if set(sub) == set(state.get("iter_enrich") or {}):
+        state.per_run_full = stored          # all collections: used for the q-values in the iteration tables
     # Rebuild each library's network from the retained terms only
     kept = {(r["Library"], r["Term"]) for _, r in terms.iterrows() if r["Kept"]}
     if "iter_dot" in state:
@@ -119,6 +121,31 @@ def render_q_threshold(st) -> None:
                     help="Correction of the iteration p-values: the q-value is the empirical false discovery rate "
                          "estimated from the random gene lists. Terms with q below this threshold form the network; "
                          "random lists are filtered the same way.")
+
+
+def run_statistics_after_analysis(st, state, default_n_lists: int = 10000, n_jobs: Optional[int] = None,
+                                  grid_lists: Optional[int] = None):
+    """Run the random-list statistics right after the iterations (all collections), with its own progress bar."""
+    iter_enrich = state.get("iter_enrich") or {}
+    state.per_run_cfg = {"default_n_lists": default_n_lists, "n_jobs": n_jobs, "grid_lists": grid_lists}
+    state.stats_libraries = None
+    state.per_run_benchmark = state.per_run_full = None
+    if not any(it.results for it in iter_enrich.values()):
+        return None
+    n, q, sd = _settings(state, default_n_lists)
+    st.caption(f"Statistics: analysing {n:,} random gene lists (plus lists for the q-value adjustment)…")
+    return _compute(st, state, iter_enrich, n, q, sd, n_jobs, grid_lists)
+
+
+def term_stats(state, library_name: str):
+    """{iteration: (q-value, kept)} for one collection, from the all-collection statistics; and the q threshold."""
+    stored = state.get("per_run_full")
+    if not stored or "terms" not in stored:
+        return None, None
+    t = stored["terms"]
+    t = t[t["Library"] == library_name]
+    return ({int(r["Iteration"]): (r["q-value"], bool(r["Kept"])) for _, r in t.iterrows()},
+            stored["attrs"].get("q_threshold"))
 
 
 def render_statistics_settings(st, default_n_lists: int = 10000, max_n_lists: int = 100000) -> None:
@@ -173,6 +200,8 @@ def render_per_run_benchmark(st, state, download_link: Callable, default_n_lists
         if stored and "iter_dot" in state:
             state.network_generated = False
             state.last_merged_dot = ""
+        if recompute and stored:
+            st.rerun()                        # refresh the q-values in the iteration tables above
     if stored and stored.get("settings") not in (None, (n_lists, q_threshold, seed)):
         u = stored["settings"]
         note.warning(f"The statistics below were computed with {u[0]:,} random lists, q < {u[1]:g} and seed {u[2]}. "
@@ -183,13 +212,9 @@ def render_per_run_benchmark(st, state, download_link: Callable, default_n_lists
         return
     obs, attrs, table = stored["observed"], stored["attrs"], stored["table"]
     qt = attrs.get("q_threshold")
-    if qt is not None and qt >= 1:
-        st.info(f"**Term level:** no q-value filter (threshold {qt}); all {obs['n_terms_total']} selected terms are in "
-                "the network. Random lists are treated the same way.")
-    elif qt is not None:
-        st.info(f"**Term level:** {obs['n_terms_kept']} of {obs['n_terms_total']} terms have q < {qt} and form the network below. "
-                f"A random list of this size selects about {attrs['expected_chance_terms']} terms by chance; "
-                f"random lists are filtered the same way before their networks are built.")
+    st.caption(f"Network built from the {obs['n_terms_kept']} of {obs['n_terms_total']} terms with q < {qt:g} "
+               "(see the q-values in the iteration tables above)." if qt is not None and qt < 1 else
+               f"Network built from all {obs['n_terms_total']} selected terms (no q-value filter).")
     if set(stored.get("libraries", [])) != set(iter_enrich):
         st.warning("Statistics and network refer to the collections chosen for the network: "
                    + ", ".join(stored["libraries"]) + ". Random lists were analysed with the same collections.")
@@ -199,14 +224,10 @@ def render_per_run_benchmark(st, state, download_link: Callable, default_n_lists
     show = table[["Metric", "Observed", "Null Mean", "Null SD", "Z-score", "Random >= Observed", "Empirical p"]].copy()
     show.columns = ["Metric", "Your network", "Random mean", "Random SD", "z-score", "Random lists ≥ yours", "Empirical p"]
     st.dataframe(show.round(4), use_container_width=True, hide_index=True)
-    if "terms" in stored and len(stored["terms"]):
-        with st.expander("Term q-values"):
-            st.dataframe(stored["terms"][["Library", "Iteration", "Term", "p-value", "q-value", "Kept"]],
-                         use_container_width=True, hide_index=True)
     mods = stored.get("modules")
     if mods is not None and mods.summary.get("n_terms"):
         sm = mods.summary
-        with st.expander(f"Communities and hub genes ({sm['n_communities']} communities)"):
+        with st.expander(f"Communities and hub genes ({sm['n_communities']} communities)", expanded=True):
             st.caption(
                 f"{sm['method']} on the term network (terms linked by shared genes). "
                 + (f"Modularity {sm['modularity']}; partition agreement across {sm['n_seeds']} seeds "
@@ -230,17 +251,13 @@ def render_per_run_benchmark(st, state, download_link: Callable, default_n_lists
 - **z-score** = (your value − random mean) / random SD, shown for reference. The random values are
   counts with skewed distributions, so read the empirical p rather than converting z to a probability.
 - The five metrics describe the same cluster and are not independent tests.
-- **q-value (per term)**: estimated fraction of chance terms among terms at least this strong, from
-  random lists of the same size, background and settings, adjusted for genes already explained by
-  accepted terms. Terms above the threshold are removed from your network and from every random network.
+- Random networks are built exactly like yours: their terms pass the same q-value filter first.
 - A small network p means your genes form a more connected cross-collection network than random lists
   of the same size, background and settings.
 """)
     name = state.get("gene_set_name") or "statistical_report"
     st.markdown(f"📄 {download_link(stored['report'], name + '_statistical_report', 'txt')} · "
-                f"{download_link(stored['null'].to_csv(sep=chr(9), index=False), name + '_random_lists', 'tsv')}"
-                + (f" · {download_link(stored['terms'].to_csv(sep=chr(9), index=False), name + '_term_qvalues', 'tsv')}"
-                   if "terms" in stored else ""),
+                f"{download_link(stored['null'].to_csv(sep=chr(9), index=False), name + '_random_lists', 'tsv')}",
                 unsafe_allow_html=True)
 
 

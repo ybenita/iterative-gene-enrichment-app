@@ -8,7 +8,7 @@ import plotly.express as px
 import streamlit as st
 from streamlit import session_state as state
 
-from enrichment import Enrichment
+from enrichment import Enrichment, background_terms
 from iter_enrichment import IterativeEnrichment
 from ui.dot_utils import dot_to_plotly
 from ui.utils import download_link
@@ -192,6 +192,23 @@ def render_validation() -> None:
                 st.success("✅ All genes are valid")
 
 
+GREY_ROW = "background-color: #e6e6e6; color: #808080"
+
+
+def add_term_stats(df: pd.DataFrame, stats) -> pd.DataFrame:
+    """Replace '-log(p-value)' by the term q-value and add 'Kept' (q below the threshold).
+    ``stats`` maps iteration -> (q-value, kept); ``df`` is indexed by iteration."""
+    df = df.drop(columns=["iteration -log(p-value)"], errors="ignore")
+    if stats is None:
+        return df
+    q = [stats.get(int(i), (np.nan, True))[0] for i in df.index]
+    kept = [stats.get(int(i), (np.nan, True))[1] for i in df.index]
+    pos = list(df.columns).index("iteration p-value") + 1 if "iteration p-value" in df.columns else 1
+    df.insert(pos, "q-value", q)
+    df.insert(pos + 1, "Kept", kept)
+    return df
+
+
 def render_iter_table(result: pd.DataFrame) -> None:
     """
     Render a styled DataFrame of iterative enrichment results.
@@ -228,15 +245,21 @@ def render_iter_table(result: pd.DataFrame) -> None:
         format_dict["Full list p-value"] = custom_format
     if "Regular FDR" in df.columns:
         format_dict["Regular FDR"] = custom_format
+    if "q-value" in df.columns:
+        format_dict["q-value"] = custom_format
 
     styled = df.style.format(format_dict)
+    if "Kept" in df.columns:  # terms removed by the q-value filter: grey rows
+        styled = styled.apply(lambda row: [GREY_ROW if not bool(row["Kept"]) else ""]
+                              * len(row), axis=1)
 
     # Build column config
     column_config = {
         "Term": "Term",
         "iteration p-value": "Iteration P-value",
         "iteration overlapping genes": "Iteration Overlapping Genes",
-        "iteration -log(p-value)": "Iteration -log(p-value)",
+        "q-value": st.column_config.Column("q-value", help="Signal-adjusted empirical q-value from the random gene lists"),
+        "Kept": st.column_config.CheckboxColumn("Kept", help="q-value below the threshold: the term is kept (grey rows are removed)"),
         "Genes removed for next iteration": "Genes Removed for Next Iteration",
         "Description": None,
         "Library": None,
@@ -297,52 +320,35 @@ def render_iter_barchart(result: pd.DataFrame, file_name: str = "") -> None:
     st.plotly_chart(fig, use_container_width=True, key=f"iter_barchart_{file_name}")
 
 
-def render_iter_results(result: IterativeEnrichment, file_name: str) -> None:
+def render_iter_results(result: IterativeEnrichment, file_name: str, term_stats=None, q_threshold=None) -> None:
     """
     Render a results section for iterative enrichment within the Streamlit app.
 
     :param result: IterativeEnrichment object containing iteration records.
-    :type result: src.iter_enrichment.IterativeEnrichment
     :param file_name: Name of the library or section header.
-    :type file_name: str
+    :param term_stats: optional {iteration: (q-value, kept)} from the random-list statistics.
+    :param q_threshold: q-value threshold used for ``kept`` (for the caption).
     """
     logger.info(f"Rendering iterative results for {file_name}.")
 
     st.divider()
     st.subheader(file_name)
-    
-    # Calculate and display library-specific size information for the initial gene set
-    # Get the first iteration's enrichment object to show initial sizes
+
+    # Collection-specific sizes, with gene sets restricted to the background (as in the analysis)
     if result._iteration_enrichments:
-        initial_enrichment = result._iteration_enrichments[0]
-        
-        # Calculate library-specific sizes for display
-        filtered_terms = [term for term in initial_enrichment.gene_set_library.library 
-                         if initial_enrichment.min_term_size <= term["size"] <= initial_enrichment.max_term_size]
-        
-        # Calculate unique genes from filtered terms only
-        filtered_unique_genes = set()
-        for term in filtered_terms:
-            filtered_unique_genes.update(term["genes"])
-        
-        # Calculate library-specific background size
-        library_background_size = len(initial_enrichment.background_gene_set.genes & filtered_unique_genes)
-        
-        # Calculate library-specific input size (genes that are in both input and library background)
-        library_input_size = len(initial_enrichment.gene_set.genes & filtered_unique_genes)
-        
-        # Display library-specific size information
-        st.caption(f"Library specific input: {library_input_size}/{initial_enrichment.gene_set.size} genes; Library specific background: {library_background_size}/{initial_enrichment.background_gene_set.size}")
-        
-        # Show final remaining genes if different from initial
+        e0 = result._iteration_enrichments[0]
+        terms = background_terms(e0.gene_set_library, e0.background_gene_set.genes, e0.min_term_size, e0.max_term_size)
+        lib_genes = set().union(*(t["genes"] for t in terms)) if terms else set()
+        lib_background = len(e0.background_gene_set.genes & lib_genes)
+        lib_input = len(e0.gene_set.genes & lib_genes)
+        st.caption(f"Collection-specific input: {lib_input}/{e0.gene_set.size} genes; "
+                   f"collection-specific background: {lib_background}/{e0.background_gene_set.size}; "
+                   f"{len(terms)} gene sets of {e0.min_term_size}-{e0.max_term_size} genes")
         if result.results:
-            # Calculate final remaining genes by starting with library-specific input size
-            # and subtracting genes removed in each iteration
-            final_remaining = library_input_size - sum(len(record.get("genes", [])) for record in result.results)
-            if final_remaining != library_input_size:
+            final_remaining = lib_input - sum(len(record.get("genes", [])) for record in result.results)
+            if final_remaining != lib_input:
                 st.caption(f"Final: {final_remaining} genes remaining after {len(result.results)} iterations")
 
-    # Tabs for table and chart
     table_tab, bar_tab = st.tabs(["Iterations", "Bar chart"])
     df = result.to_dataframe()
 
@@ -350,16 +356,21 @@ def render_iter_results(result: IterativeEnrichment, file_name: str) -> None:
         logger.warning("No iterative enrichment results.")
         st.warning("No iterative enrichment results.")
     else:
-        df = df.set_index("Iteration")
+        df = add_term_stats(df.set_index("Iteration"), term_stats)
         with table_tab:
+            if term_stats is not None and "Kept" in df.columns:
+                n_kept = int(df["Kept"].sum())
+                st.caption(f"{n_kept} of {len(df)} terms kept (q < {q_threshold:g}); grey rows are removed "
+                           "from the network." if q_threshold is not None and q_threshold < 1 else
+                           f"{n_kept} of {len(df)} terms kept (no q-value filter).")
             render_iter_table(df)
 
         with bar_tab:
             render_iter_barchart(df, file_name)
 
-        # Download links
+        tsv = df.reset_index().to_csv(sep="\t", index=False)
         st.markdown(
-            f'Download iterative results as {download_link(result.to_tsv(), file_name, "tsv")}, '
+            f'Download iterative results as {download_link(tsv, file_name, "tsv")}, '
             f'{download_link(result.to_json(), file_name, "json")}',
             unsafe_allow_html=True,
         )
