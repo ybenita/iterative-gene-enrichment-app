@@ -368,7 +368,7 @@ def render_iter_results(result: IterativeEnrichment, file_name: str, term_stats=
         with bar_tab:
             render_iter_barchart(df, file_name)
 
-        tsv = df.reset_index().to_csv(sep="\t", index=False)
+        tsv = df.reset_index().rename(columns={"Library": "Collection"}).to_csv(sep="\t", index=False)
         st.markdown(
             f'Download iterative results as {download_link(tsv, file_name, "tsv")}, '
             f'{download_link(result.to_json(), file_name, "json")}',

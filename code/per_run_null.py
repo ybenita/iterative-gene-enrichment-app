@@ -417,7 +417,7 @@ def format_report(table: pd.DataFrame, attrs: Dict, libraries: List[str], params
         lines.append(f"  {r['Metric']:<26}{r['Observed']:>10.4g}{r['Null Mean']:>11.3f}{r['Null SD']:>9.3f}"
                      f"{r['Null Max']:>10.4g}{r['Z-score']:>8.2f}{r['Random >= Observed']:>6d}{r['Empirical p']:>10.4g}")
     if observed_terms is not None and len(observed_terms):
-        lines += ["", "TERMS", f"  {'Library':<40}{'It':>4}  {'p-value':>10}{'q-value':>9}  Kept  Term"]
+        lines += ["", "TERMS", f"  {'Collection':<40}{'It':>4}  {'p-value':>10}{'q-value':>9}  Kept  Term"]
         for _, r in observed_terms.sort_values(["Library", "Iteration"]).iterrows():
             lines.append(f"  {r['Library'][:39]:<40}{r['Iteration']:>4}  {r['p-value']:>10.3g}{r['q-value']:>9.3g}  "
                          f"{'yes ' if r['Kept'] else 'no  '}  {r['Term']}")

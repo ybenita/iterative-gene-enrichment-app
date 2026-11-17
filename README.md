@@ -16,8 +16,8 @@ Access the application directly in your browser — no installation required:
 
 1. Prepare a gene list in **official human gene symbols** (e.g., TP53, BRCA1) or **Entrez IDs** (e.g., 7157, 672).
 2. Open the app and paste your genes or upload a file.
-3. Select gene set libraries and analysis mode (Regular or Iterative).
-4. Click **Run Enrichment** and explore interactive results.
+3. Select gene set collections and analysis mode (Regular or Iterative).
+4. Click **Submit** and explore interactive results.
 
 ---
 
@@ -38,26 +38,26 @@ Access the application directly in your browser — no installation required:
 | **Correction** | FDR-adjusted p-values | Empirical q-value per term and network significance, both from random gene lists matched to your run |
 | **Best for** | Quick, standard enrichment | Deep, iterative discovery of enriched pathways |
 
-### Gene Set Libraries (MSigDB v2025.1)
+### Gene Set Collections (MSigDB v2025.1)
 
-The app ships with the 10 gene set libraries from [MSigDB](https://www.gsea-msigdb.org/gsea/msigdb/) used in the iGEA paper:
+The app ships with the 10 gene set collections from [MSigDB](https://www.gsea-msigdb.org/gsea/msigdb/) used in the iGEA paper:
 
-| Collection | Library |
+| MSigDB collection | Gene set collections |
 |---|---|
 | **Hallmark** | H: Hallmark Gene Sets |
 | **Canonical Pathways (C2)** | BioCarta · KEGG Legacy · KEGG MEDICUS · PID · Reactome · WikiPathways |
 | **Ontology (C5)** | GO Biological Process · GO Cellular Component · GO Molecular Function |
 
-Custom libraries in `.gmt` format can be uploaded through the UI.
+Other collections in `.gmt` format can be added (see *Adding Custom Gene Set Collections*).
 
 ### Background Gene Sets
 - **All genes** (default): Uses the full set of annotated human genes.
 - **Custom background**: Upload a `.txt` file with all measured genes for more accurate statistics.
 
 ### Results & Export
-- **Interactive bar charts** for each library with adjustable display settings.
+- **Interactive bar charts** for each collection.
 - **Export options**: Download results as TSV, JSON, or combined archives (`.tar.gz`).
-- **Network visualization**: Explore gene-term relationships as interactive network graphs.
+- **Network visualization**: the network of terms that passed the q-value filter, coloured by community or collection, with hub and bridge genes; the same network is exported for AI analysis.
 - **Unique filenames**: All outputs are saved with timestamped, unique identifiers.
 
 ### Statistical Methods
@@ -149,25 +149,24 @@ pip install -r requirements.txt
 streamlit run code/streamlit_app.py
 ```
 
-> **Note**: Graphviz must be installed on your system for network visualization (`brew install graphviz` on macOS, `sudo apt install graphviz graphviz-dev` on Linux).
 
 ---
 
-## Adding Custom Gene Set Libraries
+## Adding Custom Gene Set Collections
 
 1. Place your `.gmt` file in `data/libraries/`.
 2. Add an entry to `data/libraries/alias.json`:
    ```json
    {
-       "name": "My Custom Library",
-       "file": "my_library.gmt",
+       "name": "My Custom Collection",
+       "file": "my_collection.gmt",
        "active": true,
        "color": "#4CAF50"
    }
    ```
-3. Restart the app — the new library will appear in the selection panel.
+3. Restart the app — the new collection will appear in the selection panel.
 
-Alternatively, upload a `.gmt` file directly through the app's **Upload Library** feature.
+Use gene symbols that match the bundled NCBI gene information (the full repository has `code/libraries.py add` to harmonise symbols).
 
 ---
 

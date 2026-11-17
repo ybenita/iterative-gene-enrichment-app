@@ -131,7 +131,7 @@ def _build_library_legend(lib_to_color: Dict[str, str]) -> str:
     """Create a legend subgraph mapping each library to its color."""
     lines = [
         "  subgraph cluster_legend_libs {",
-        '    label="Libraries";',
+        '    label="Collections";',
         '    node [shape=box, style=filled, fontcolor="white"];',
     ]
     for i, (lib, color) in enumerate(lib_to_color.items(), 1):

@@ -304,7 +304,7 @@ def _build_iterative_tables_download(all_iter_results: Dict[str, List[dict]]) ->
     
     df = df[column_order]
     
-    return df.to_csv(sep="\t", index=False)
+    return df.rename(columns={"Library": "Collection"}).to_csv(sep="\t", index=False)
 
 
 def _extract_iteration_1_as_ora(iterative_enrichments: Dict[str, IterativeEnrichment]) -> Dict[str, List[dict]]:
@@ -418,7 +418,7 @@ def _build_ora_tables_download(ora_results: Dict[str, List[dict]]) -> str:
     Returns:
         TSV string with combined ORA results
     """
-    rows = ["Library\tRank\tTerm\tDescription\tOverlap size\tp-value\t-log(p-value)\tFDR\tGenes"]
+    rows = ["Collection\tRank\tTerm\tDescription\tOverlap size\tp-value\t-log(p-value)\tFDR\tGenes"]
     for lib, records in ora_results.items():
         for rec in records:
             rows.append(
@@ -485,7 +485,7 @@ def _create_combined_ora_archive(iterative_enrichments: Dict[str, IterativeEnric
             # Create temporary file for this library's ORA results
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.tsv') as tmp_file:
-                df.to_csv(tmp_file.name, sep='\t', index=False)
+                df.rename(columns={"Library": "Collection"}).to_csv(tmp_file.name, sep='\t', index=False)
                 # Sanitize library name for filename
                 safe_lib_name = lib_name.replace(':', '_').replace(' ', '_').replace('-', '_').replace('/', '_')
                 arcname = f"{safe_lib_name}_ora_results.tsv"
@@ -622,9 +622,9 @@ def main() -> None:
         logger.warning(f"Logo not found at {logo_path}")
     st.sidebar.title("Enrichment analysis")
     st.sidebar.write(
-        """This app tests the input gene list against selected pathway libraries. 
+        """This app tests the input gene list against selected gene set collections.
         
-**Regular Mode**: Runs once and reports all results that pass the filters per library.
+**Regular Mode**: Runs once and reports all results that pass the filters per collection.
 
 **Iterative Mode**: Iteratively removes genes from the top hit at each step until no term passes the p-value cutoff.
 
@@ -814,7 +814,7 @@ Results include ranked tables, bar charts, and network graphs."""
                 state.libraries = default_libraries
             
             # Simple library selection with 3 columns
-            st.markdown("**Select libraries:**")
+            st.markdown("**Select gene set collections:**")
             
             # Get all available libraries
             all_libraries = list(state.lib_mapper.keys())
@@ -880,7 +880,7 @@ Results include ranked tables, bar charts, and network graphs."""
                         lib_path = ROOT / "data" / "libraries" / lib_filename
                         if not lib_path.exists():
                             logger.error(f"Library file not found: {lib_path}")
-                            st.error(f"❌ Library file not found: {lib_filename}")
+                            st.error(f"❌ Collection file not found: {lib_filename}")
                             continue
                         lib_name = get_library_name_from_alias(lib_path)
                         state.gene_set_libraries.append(
@@ -891,7 +891,7 @@ Results include ranked tables, bar charts, and network graphs."""
                         )
                     except Exception as e:
                         logger.error(f"Error loading library '{lib}': {e}")
-                        st.error(f"❌ Error loading library '{lib}': {e}")
+                        st.error(f"❌ Error loading collection '{lib}': {e}")
             else:
                 state.gene_set_libraries = []
             # Always load background gene set
@@ -1176,7 +1176,7 @@ Results include ranked tables, bar charts, and network graphs."""
         
         # Check 3: At least 1 selected library
         if not state.gene_set_libraries or len(state.gene_set_libraries) == 0:
-            st.error("❌ **Library validation failed!** No gene set libraries selected. Please select at least one library.")
+            st.error("❌ **No collection selected.** Please select at least one gene set collection.")
             validation_passed = False
         
         # Only proceed if all validations pass
@@ -1199,7 +1199,7 @@ Results include ranked tables, bar charts, and network graphs."""
                 # Update progress
                 progress = (i + 1) / total_libraries
                 progress_bar.progress(progress)
-                status_text.text(f"Processing library {i+1}/{total_libraries}: {gsl.name} ({gsl.num_terms} terms)")
+                status_text.text(f"Processing collection {i+1}/{total_libraries}: {gsl.name} ({gsl.num_terms} terms)")
                 
                 logger.info(f"Starting regular enrichment for library: {gsl.name}")
                 
@@ -1240,7 +1240,7 @@ Results include ranked tables, bar charts, and network graphs."""
                     
                 except Exception as e:
                     logger.error(f"Error processing library {gsl.name}: {e}")
-                    st.error(f"❌ Error processing library {gsl.name}: {str(e)}")
+                    st.error(f"❌ Error processing collection {gsl.name}: {str(e)}")
                     continue
             
             # Clear progress indicators
@@ -1327,7 +1327,7 @@ Results include ranked tables, bar charts, and network graphs."""
         
         # Check 3: At least 1 selected library
         if not state.gene_set_libraries or len(state.gene_set_libraries) == 0:
-            st.error("❌ **Library validation failed!** No gene set libraries selected. Please select at least one library.")
+            st.error("❌ **No collection selected.** Please select at least one gene set collection.")
             validation_passed = False
         
         # Only proceed if all validations pass
@@ -1352,14 +1352,14 @@ Results include ranked tables, bar charts, and network graphs."""
                 # Update progress
                 progress = (i + 1) / total_libraries
                 progress_bar.progress(progress)
-                status_text.text(f"Processing library {i+1}/{total_libraries}: {gsl.name} ({gsl.num_terms} terms)")
+                status_text.text(f"Processing collection {i+1}/{total_libraries}: {gsl.name} ({gsl.num_terms} terms)")
                 
                 logger.info(f"Starting iterative enrichment for library: {gsl.name}")
                 
                 try:
                     # Create a progress callback for this library
                     def progress_callback(message: str):
-                        status_text.text(f"Processing library {i+1}/{total_libraries}: {gsl.name} - {message}")
+                        status_text.text(f"Processing collection {i+1}/{total_libraries}: {gsl.name} - {message}")
                     
                     it = IterativeEnrichment(
                         gene_set=state.gene_set,
@@ -1392,7 +1392,7 @@ Results include ranked tables, bar charts, and network graphs."""
                     
                 except Exception as e:
                     logger.error(f"Error processing library {gsl.name}: {e}")
-                    st.error(f"❌ Error processing library {gsl.name}: {str(e)}")
+                    st.error(f"❌ Error processing collection {gsl.name}: {str(e)}")
                     continue
             
             # Clear progress indicators
@@ -1555,7 +1555,7 @@ Results include ranked tables, bar charts, and network graphs."""
         st.header("Generate network for conversational AI systems")
         
         # Interactive library selection interface
-        st.subheader("Library Selection for Network")
+        st.subheader("Collections for the network")
         
         # Get all available libraries in specific order: Hallmark, C2 (alphabetical), C5 (alphabetical), Protein Interaction
         def sort_libraries(libraries):
@@ -1570,7 +1570,7 @@ Results include ranked tables, bar charts, and network graphs."""
         available_libraries = sort_libraries(list(state.iter_enrich.keys()))
         
         # Interactive list with checkboxes for each library
-        st.write("**Available Libraries:**")
+        st.write("**Available collections:**")
         for lib in available_libraries:
             # Check if this library has any enrichment results
             has_results = not state.iter_enrich[lib].to_dataframe().empty
@@ -1593,13 +1593,13 @@ Results include ranked tables, bar charts, and network graphs."""
         # generate or re-display merged network
         if st.button("Generate Network"):
             if not state.selected_dot_paths:
-                st.error("Please select at least one library for network generation.")
+                st.error("Please select at least one collection for the network.")
             else:
                 state.network_generated = True
                 available = set(state.iter_dot.keys())
                 chosen = [lib for lib in state.selected_dot_paths if lib in available]
                 if not chosen:
-                    st.error("No valid libraries selected for network generation.")
+                    st.error("No valid collections selected for the network.")
                 else:
                     # Statistics must refer to the collections drawn (random lists use the same ones)
                     recomputed = ensure_statistics(st, state, chosen)

@@ -239,7 +239,7 @@ def render_per_run_benchmark(st, state, download_link: Callable, default_n_lists
                          use_container_width=True, hide_index=True)
             nm = state.get("gene_set_name") or "network"
             st.markdown(f"📄 {download_link(mods.communities.to_csv(sep=chr(9), index=False), nm + '_communities', 'tsv')} · "
-                        f"{download_link(mods.terms.to_csv(sep=chr(9), index=False), nm + '_community_terms', 'tsv')} · "
+                        f"{download_link(mods.terms.rename(columns={'Library': 'Collection'}).to_csv(sep=chr(9), index=False), nm + '_community_terms', 'tsv')} · "
                         f"{download_link(mods.genes.to_csv(sep=chr(9), index=False), nm + '_hub_genes', 'tsv')}",
                         unsafe_allow_html=True)
     with st.expander("📖 How to read these numbers"):
