@@ -127,7 +127,7 @@ def _hull(points, pad: float):
     return poly + poly[:1]
 
 
-LABEL_OPTIONS = ["Hub genes and lead terms", "Hub genes", "None"]
+LABEL_OPTIONS = ["Hub genes and lead terms", "All genes and lead terms", "None"]
 
 
 def network_figure(terms: List[Dict], modules=None, colour_by: str = "Community",
@@ -190,7 +190,8 @@ def network_figure(terms: List[Dict], modules=None, colour_by: str = "Community"
 
     hubs = set([g for g in sorted(deg, key=lambda g: (-deg[g], g)) if deg[g] >= 2][:n_hub_labels])
     label_genes = labels != "None"
-    label_lead = labels == "Hub genes and lead terms"
+    label_lead = labels in ("Hub genes and lead terms", "All genes and lead terms")
+    all_genes = labels == "All genes and lead terms"
     gsize = lambda g: min(6 + 3 * deg[g], 30)
     tsize = lambda i: min(10 + 3.2 * math.sqrt(len(set(terms[i]["genes"]))), 30)
     xs = [p[0] for p in pos.values()] or [0]
@@ -267,8 +268,9 @@ def network_figure(terms: List[Dict], modules=None, colour_by: str = "Community"
         traces.append(go.Scatter(
             x=[pos[("G", g)][0] for g in gs], y=[pos[("G", g)][1] for g in gs],
             mode="markers+text" if label_genes else "markers",
-            text=[g if g in hubs else "" for g in gs] if label_genes else None,
-            textposition="top center", textfont=dict(size=11, color=INK),
+            text=[g if (all_genes or g in hubs) else "" for g in gs] if label_genes else None,
+            textposition="top center",
+            textfont=dict(size=[11 if g in hubs else 9 for g in gs] if all_genes else 11, color=INK),
             marker=dict(symbol=symbol, size=[gsize(g) for g in gs], color=colours,
                         line=dict(width=1.5 if diamond else 1, color=INK if diamond else "white")),
             hovertext=[gene_hover(g) for g in gs], hoverinfo="text", name=name, legendgroup=group, showlegend=show))
