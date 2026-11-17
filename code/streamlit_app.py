@@ -984,7 +984,9 @@ Results include ranked tables, bar charts, and network graphs."""
                     help="Filter gene sets by their size (number of genes)."
                 )
             if mode == "Iterative":
-                st.markdown("**Iterative parameters**")
+                st.markdown("**Iteration**")
+                st.caption("Each iteration selects the most enriched gene set in each collection and removes its "
+                           "genes before the next iteration.")
                 state.iter_p_threshold = st.number_input(
                     "P-value threshold",
                     min_value=1e-10,
@@ -1013,7 +1015,10 @@ Results include ranked tables, bar charts, and network graphs."""
                     step=10,
                     max_value=5000
                 )
-                st.markdown("**Network statistics (random gene lists)**")
+                st.markdown("**Statistics (random gene lists)**")
+                st.caption("Random gene lists of your input size, drawn from your background and analysed exactly "
+                           "like your list, give each term's q-value (which terms enter the network) and the "
+                           "network's significance.")
                 render_statistics_settings(st, default_n_lists=1000, max_n_lists=10000)
 
 
@@ -1536,7 +1541,7 @@ Results include ranked tables, bar charts, and network graphs."""
         # Streamlit Community Cloud: 0.078-2 CPUs and 690 MB-2.7 GB memory per app, so the random
         # lists run in this process (no worker processes) and the default is 1,000 lists (max 10,000).
         st.markdown("---")
-        st.header("📊 Network statistics")
+        st.header("📊 Statistics (random gene lists)")
         render_per_run_benchmark(st, state, download_link, default_n_lists=1000, max_n_lists=10000, n_jobs=1, grid_lists=200)
 
         # Network section

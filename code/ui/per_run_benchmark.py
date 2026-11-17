@@ -3,7 +3,7 @@ Streamlit section: network statistics against random gene lists generated for th
 
 The random lists have the validated input size, are drawn from the run's background and are
 analysed with the run's collections and parameters (see per_run_null.py). Statistics run automatically
-after each new iGEA analysis with the settings chosen under Iterative parameters (render_statistics_settings),
+after each new iGEA analysis with the settings chosen under Statistics (random gene lists) (render_statistics_settings),
 because the term q-value filter decides which terms enter the network; the network shown and exported
 (state.iter_dot) is rebuilt from the retained terms. Changed settings are applied with the Recompute button;
 a q-value threshold of 1 keeps all selected terms.
@@ -162,7 +162,7 @@ def render_per_run_benchmark(st, state, download_link: Callable, default_n_lists
     changed = bool(stored) and stored.get("settings") not in (None, (n_lists, q_threshold, seed))
     note = st.empty()
     recompute = st.button("Recompute statistics", type="primary" if (changed or not stored) else "secondary",
-                          help="Settings are under Iterative parameters (Analysis tab).")
+                          help="Settings are under Statistics (random gene lists) in the Analysis tab.")
     if recompute or not stored:
         stored = _compute(st, state, sub, n_lists, q_threshold, seed, n_jobs, grid_lists)
         if stored and "iter_dot" in state:
