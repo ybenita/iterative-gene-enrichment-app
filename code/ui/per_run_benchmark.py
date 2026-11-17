@@ -61,7 +61,8 @@ def _compute(st, state, sub: Dict, n_lists: int, q_threshold: float, seed: int,
     t0 = time.time()
 
     def progress(done, total, label):
-        bar.progress(done / total, text=f"Analysing {label}… {done:,}/{total:,} ({time.time() - t0:.0f} s)")
+        bar.progress(min(1.0, done / max(total, 1)),
+                     text=f"Statistics, {label}: {done:,}/{total:,} ({time.time() - t0:.0f} s)")
     table, null, terms, observed, attrs = run_statistics(
         records, libraries, first.background_gene_set.genes, n_genes, n_lists=int(n_lists), seed=int(seed),
         q_threshold=float(q_threshold), grid_lists=grid_lists, n_jobs=n_jobs, progress_callback=progress, **params)
@@ -133,7 +134,16 @@ def run_statistics_after_analysis(st, state, default_n_lists: int = 10000, n_job
     if not any(it.results for it in iter_enrich.values()):
         return None
     n, q, sd = _settings(state, default_n_lists)
-    st.caption(f"Statistics: analysing {n:,} random gene lists (plus lists for the q-value adjustment)…")
+    try:
+        from per_run_null import grid_sizes
+        n_genes = next(iter(iter_enrich.values())).gene_set.size
+        n_sizes = len(grid_sizes(n_genes)) - 1
+        g = grid_lists or max(200, n // 10)
+        st.caption(f"Statistics: {n:,} random lists of {n_genes} genes for the network test, then "
+                   f"{n_sizes * g:,} smaller lists ({n_sizes} sizes × {g:,}) for the q-value adjustment, "
+                   "then the random networks are built and scored.")
+    except Exception:
+        pass
     return _compute(st, state, iter_enrich, n, q, sd, n_jobs, grid_lists)
 
 

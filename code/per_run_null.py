@@ -307,7 +307,23 @@ def run_statistics(observed_records: Sequence[Record], libraries, background_gen
     tasks = [(n_genes, i) for i in range(n_lists)]
     grid = grid_sizes(n_genes) if q_threshold is not None else [n_genes]
     tasks += [(s, i) for s in grid if s != n_genes for i in range(grid_lists)]
-    stage = lambda d, n, lab: progress_callback(d, n, lab) if progress_callback else None
+    n_grid = len(tasks) - n_lists
+    n_steps = 3 if n_grid else 2
+
+    def stage(d, n, lab):
+        """Progress per step: (1) lists of the input size for the network test, (2) smaller lists for the
+        q-value signal adjustment, (3) building and scoring the random networks."""
+        if not progress_callback:
+            return
+        if lab == "random lists":
+            if d <= n_lists:
+                progress_callback(d, n_lists, f"step 1/{n_steps}: random lists of {n_genes} genes (network test)")
+            else:
+                progress_callback(d - n_lists, n_grid, f"step 2/{n_steps}: lists for the q-value adjustment "
+                                                       f"({len(grid) - 1} sizes × {grid_lists:,})")
+        else:
+            progress_callback(d, n, f"step {n_steps}/{n_steps}: scoring {lab}")
+
     if cache_dir:
         generated = _generate_cached(tasks, collections, background, seed, params, n_jobs, stage, cache_dir)
     else:
