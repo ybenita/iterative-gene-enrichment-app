@@ -30,7 +30,8 @@ from ui.rendering import (
     render_ora_igea_comparison,
 )
 from ui.utils import download_link, download_file_link, update_aliases
-from ui.per_run_benchmark import ensure_statistics, llm_export_from_state, render_per_run_benchmark
+from ui.per_run_benchmark import (ensure_statistics, llm_export_from_state, render_per_run_benchmark,
+                                  render_statistics_settings)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -71,8 +72,9 @@ def get_msigdb_version_info() -> tuple[str, str]:
             if version_match:
                 version = version_match.group(1)
     
-    # Get last update date from backup directories
-    update_date = "Unknown"
+    # Get last update date from backup directories; without them, the date the 2025.1 GMT files in this
+    # repository were downloaded from MSigDB (backup_20250809 in the analysis repository)
+    update_date = "2025-08-09" if version == "2025.1" else "Unknown"
     if backup_dir.exists():
         backup_dirs = [d for d in backup_dir.iterdir() if d.is_dir() and d.name.startswith("backup_")]
         if backup_dirs:
@@ -1011,29 +1013,12 @@ Results include ranked tables, bar charts, and network graphs."""
                     step=10,
                     max_value=5000
                 )
+                st.markdown("**Network statistics (random gene lists)**")
+                render_statistics_settings(st, default_n_lists=1000, max_n_lists=10000)
 
 
-    # Filter gene sets based on mode-specific max_term_size
-    if state.gene_set_libraries:
-        if mode == "Regular":
-            for gsl in state.gene_set_libraries:
-                filtered_terms = [
-                    t for t in gsl.library if t["size"] <= state.max_term_size
-                ]
-                gsl.library = filtered_terms
-                gsl.num_terms = len(filtered_terms)
-                gsl.unique_genes = gsl.compute_unique_genes()
-                gsl.size = len(gsl.unique_genes)
-        elif mode == "Iterative":
-            for gsl in state.gene_set_libraries:
-                filtered_terms = [
-                    t for t in gsl.library if t["size"] <= state.iter_max_term_size
-                ]
-                gsl.library = filtered_terms
-                gsl.num_terms = len(filtered_terms)
-                gsl.unique_genes = gsl.compute_unique_genes()
-                gsl.size = len(gsl.unique_genes)
-
+    # Gene sets are filtered by size inside the analysis (after restriction to the background), exactly as in
+    # the command-line tool; the libraries themselves are not modified here.
 
 
     with advanced:

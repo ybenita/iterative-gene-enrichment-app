@@ -3,9 +3,10 @@ Streamlit section: network statistics against random gene lists generated for th
 
 The random lists have the validated input size, are drawn from the run's background and are
 analysed with the run's collections and parameters (see per_run_null.py). Statistics run automatically
-after each new iGEA analysis, because the term q-value filter decides which terms enter the network;
-the network shown and exported (state.iter_dot) is rebuilt from the retained terms. Use the button to
-recompute with other settings; a q-value threshold of 1 keeps all selected terms.
+after each new iGEA analysis with the settings chosen under Iterative parameters (render_statistics_settings),
+because the term q-value filter decides which terms enter the network; the network shown and exported
+(state.iter_dot) is rebuilt from the retained terms. Changed settings are applied with the Recompute button;
+a q-value threshold of 1 keeps all selected terms.
 """
 import logging
 import time
@@ -72,7 +73,8 @@ def _compute(st, state, sub: Dict, n_lists: int, q_threshold: float, seed: int,
               f"{observed['n_terms']} terms, {observed['n_edges']} edges, "
               f"{observed['avg_edges_per_gene']:.4f} edges per gene, {observed['n_libraries']} collections\n\n"
               + format_report(table, attrs, [lib.name for lib in libraries], shown, terms))
-    stored = {"signature": _run_signature(sub), "libraries": list(sub.keys()), "table": table, "report": report,
+    stored = {"signature": _run_signature(sub), "settings": (int(n_lists), float(q_threshold), int(seed)),
+              "libraries": list(sub.keys()), "table": table, "report": report,
               "terms": terms, "null": null, "observed": observed, "attrs": dict(attrs)}
     state.per_run_benchmark = stored
     # Rebuild each library's network from the retained terms only
@@ -105,10 +107,29 @@ def ensure_statistics(st, state, library_names) -> bool:
         return False
     cfg = state.get("per_run_cfg") or {}
     with st.spinner("Recomputing statistics for the selected collections…"):
-        _compute(st, state, sub, state.get("null_n_lists", cfg.get("default_n_lists", 10000)),
-                 state.get("null_q_threshold", DEFAULT_Q_THRESHOLD), state.get("null_seed", DEFAULT_SEED),
-                 cfg.get("n_jobs"), cfg.get("grid_lists"))
+        n, q, sd = _settings(state, cfg.get("default_n_lists", 10000))
+        _compute(st, state, sub, n, q, sd, cfg.get("n_jobs"), cfg.get("grid_lists"))
     return True
+
+
+def render_statistics_settings(st, default_n_lists: int = 10000, max_n_lists: int = 100000) -> None:
+    """Statistics settings, shown with the analysis parameters so the first run already uses them."""
+    st.number_input("Number of random lists", min_value=100, max_value=max_n_lists, value=default_n_lists,
+                    step=100, key="null_n_lists",
+                    help="Random gene lists of your input size, drawn from your background and analysed with the "
+                         "same collections and parameters. More lists give more precise q-values and p-values "
+                         "(smallest attainable p = 1 / (lists + 1)) but take longer.")
+    st.number_input("Term q-value threshold (1 = keep all terms)", min_value=0.01, max_value=1.0,
+                    value=DEFAULT_Q_THRESHOLD, step=0.01, format="%.2f", key="null_q_threshold",
+                    help="Terms with an empirical q-value below this threshold form the network; random lists "
+                         "are filtered the same way.")
+    st.number_input("Random seed", min_value=0, value=DEFAULT_SEED, step=1, key="null_seed",
+                    help="Fixes the random lists, so results are reproducible.")
+
+
+def _settings(state, default_n_lists):
+    return (int(state.get("null_n_lists", default_n_lists)), float(state.get("null_q_threshold", DEFAULT_Q_THRESHOLD)),
+            int(state.get("null_seed", DEFAULT_SEED)))
 
 
 def render_per_run_benchmark(st, state, download_link: Callable, default_n_lists: int = 10000,
@@ -134,22 +155,24 @@ def render_per_run_benchmark(st, state, download_link: Callable, default_n_lists
         f"(your validated input), drawn from your background ({first.background_gene_set.size} genes) and "
         "analysed with the same collections and parameters."
     )
-    c1, c2, c3 = st.columns(3)
-    n_lists = c1.number_input("Number of random lists", min_value=100, max_value=max_n_lists,
-                              value=default_n_lists, step=100, key="null_n_lists")
-    q_threshold = c2.number_input("Term q-value threshold (1 = keep all terms)", min_value=0.01, max_value=1.0,
-                                  value=DEFAULT_Q_THRESHOLD, step=0.01, format="%.2f", key="null_q_threshold")
-    seed = c3.number_input("Random seed", min_value=0, value=DEFAULT_SEED, step=1, key="null_seed")
+    n_lists, q_threshold, seed = _settings(state, default_n_lists)
     if seconds_per_list_hint:
         st.caption(f"Estimated time: about {max(1, round(n_lists * seconds_per_list_hint / 60))} min "
                    "(longer for large gene lists).")
-
-    recompute = st.button("Recompute statistics", type="secondary" if stored else "primary")
+    changed = bool(stored) and stored.get("settings") not in (None, (n_lists, q_threshold, seed))
+    note = st.empty()
+    recompute = st.button("Recompute statistics", type="primary" if (changed or not stored) else "secondary",
+                          help="Settings are under Iterative parameters (Analysis tab).")
     if recompute or not stored:
         stored = _compute(st, state, sub, n_lists, q_threshold, seed, n_jobs, grid_lists)
         if stored and "iter_dot" in state:
             state.network_generated = False
             state.last_merged_dot = ""
+    if stored and stored.get("settings") not in (None, (n_lists, q_threshold, seed)):
+        u = stored["settings"]
+        note.warning(f"The statistics below were computed with {u[0]:,} random lists, q < {u[1]:g} and seed {u[2]}. "
+                     f"The settings are now {n_lists:,} lists, q < {q_threshold:g} and seed {seed}: press "
+                     "**Recompute statistics** to apply them.")
 
     if not stored:
         return
