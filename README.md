@@ -61,7 +61,7 @@ Other collections in `.gmt` format can be added (see *Adding Custom Gene Set Col
 - **Unique filenames**: All outputs are saved with timestamped, unique identifiers.
 
 ### Statistical Methods
-- **Fisher's Exact Test**
+- **Fisher's exact test** (one-sided: over-representation; default; same p-values as the hypergeometric test)
 - **Hypergeometric Test**
 - **Chi-Squared Test**
 

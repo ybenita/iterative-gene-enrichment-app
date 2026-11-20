@@ -1047,6 +1047,8 @@ Results include ranked tables, bar charts, and network graphs."""
             "P-value calculation method",
             ["Fisher's Exact Test", "Hypergeometric Test", "Chi-squared Test"],
             key="p_val_method",
+            help="Fisher's exact test is one-sided (over-representation only) and gives the same p-values as the "
+                 "hypergeometric test.",
         )
         if state.p_val_method != "Fisher's Exact Test":
             state.advanced_settings_changed = True

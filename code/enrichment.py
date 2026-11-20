@@ -128,7 +128,8 @@ def compute_pvalue(
     ]
 
     if p_value_method_name == "Fisher's Exact Test":
-        _, p_value = fisher_exact(contingency_table)
+        # one-sided (over-representation); identical to the hypergeometric upper tail
+        _, p_value = fisher_exact(contingency_table, alternative="greater")
     elif p_value_method_name == "Chi-squared Test":
         chi2, p_value, _, _ = chi2_contingency(contingency_table)
     elif p_value_method_name == "Hypergeometric Test":

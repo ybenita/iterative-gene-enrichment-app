@@ -33,8 +33,14 @@ def _lchoose(a, b):
     return gammaln(a + 1) - gammaln(b + 1) - gammaln(a - b + 1)
 
 
+def _fisher_one_sided_fast(k, K, n, M):
+    """Vectorised one-sided (over-representation) Fisher p-values = hypergeometric upper tail P(X >= k).
+    Used to rank candidates; the best candidates are recomputed with fisher_exact."""
+    return np.minimum(hypergeom.sf(k - 1, M, K, n), 1.0)
+
+
 def _fisher_two_sided_fast(k, K, n, M):
-    """Vectorised two-sided Fisher p-values (log-space). Used only to rank candidates."""
+    """Vectorised two-sided Fisher p-values (log-space). Not used by default (kept for reference)."""
     lo = np.maximum(0, n + K - M)
     hi = np.minimum(K, n)
     width = int((hi - lo).max()) + 1
@@ -49,8 +55,8 @@ def _fisher_two_sided_fast(k, K, n, M):
 
 
 def _pmf_lower_bound(k, K, n, M):
-    """Lower bound of the two-sided Fisher p-value: the probability of the observed table itself (the two-sided
-    p-value sums the probabilities of all tables at most as likely as the observed one, including it)."""
+    """Lower bound of the Fisher p-value: the probability of the observed table itself (the one-sided p-value
+    sums the probabilities of all tables with an overlap of at least k, including the observed one)."""
     return np.exp(_lchoose(K, k) + _lchoose(M - K, n - k) - _lchoose(M, n))
 
 
@@ -58,7 +64,8 @@ def exact_pvalue(method: str, k: int, K: int, n: int, M: int) -> float:
     """p-value computed exactly as in enrichment.compute_pvalue."""
     table = [[k, K - k], [n - k, M - K - n + k]]
     if method == FISHER:
-        return float(fisher_exact(table)[1])
+        # one-sided: over-representation only (identical to the hypergeometric upper tail)
+        return float(fisher_exact(table, alternative="greater")[1])
     if method == HYPERGEOMETRIC:
         return float(hypergeom.sf(k - 1, M, K, n))
     if method == CHI_SQUARED:
@@ -100,7 +107,7 @@ class FastCollection:
 
     def _pvalues(self, method, k, K, n):
         if method == FISHER:
-            return _fisher_two_sided_fast(k, K, n, self.M)
+            return _fisher_one_sided_fast(k, K, n, self.M)
         if method == HYPERGEOMETRIC:
             return hypergeom.sf(k - 1, self.M, K, n)
         if method == CHI_SQUARED:
@@ -133,7 +140,7 @@ class FastCollection:
                 break
             if method == FISHER:
                 # Sets whose p-value cannot reach the threshold cannot be selected; dropping them before the
-                # (expensive) two-sided computation leaves the selected term and its p-value unchanged.
+                # p-value computation leaves the selected term and its p-value unchanged.
                 cand = cand[_pmf_lower_bound(k[cand], self.K[cand], n, self.M) < p_threshold * (1 + 1e-6)]
                 if cand.size == 0:
                     break
