@@ -217,6 +217,7 @@ def _pool_map(fn, items, init, initargs, n_jobs, progress=None, label=""):
 
 # ----------------------------------------------------------------------------- optional disk cache
 CACHE_BLOCK = 500
+CACHE_VERSION = "2-fisher-one-sided"   # bump when results of the same parameters change
 
 
 def _cache_key(background, collections, params, seed) -> str:
@@ -231,6 +232,7 @@ def _cache_key(background, collections, params, seed) -> str:
         h.update("\n".join(col.genes).encode())
     h.update(repr(sorted(params.items())).encode())
     h.update(str(seed).encode())
+    h.update(CACHE_VERSION.encode())   # changes whenever the computation changes (e.g. the test)
     return h.hexdigest()[:16]
 
 
