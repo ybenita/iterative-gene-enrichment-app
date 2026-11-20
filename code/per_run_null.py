@@ -406,7 +406,7 @@ def format_report(table: pd.DataFrame, attrs: Dict, libraries: List[str], params
         f"Random lists: {n}, each of {attrs['n_genes']} genes (= validated input size), drawn without replacement",
         f"from the analysis background ({attrs['background_size']} genes); seed {attrs['seed']}; {attrs['seconds']} s on {attrs['n_jobs']} process(es).",
         "Each random list was analysed with the same collections and parameters as the input:",
-        "  " + ", ".join(f"{k}={v}" for k, v in params.items()),
+        "  " + ", ".join(f"{k}={v}" + (" (one-sided)" if v == FISHER else "") for k, v in params.items()),
         "Collections: " + "; ".join(libraries),
         "",
     ]
